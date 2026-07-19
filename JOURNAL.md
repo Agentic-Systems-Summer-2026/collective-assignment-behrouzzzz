@@ -34,7 +34,7 @@ Template per entry:
 | 5   | agent    | 8     | 6213   | 8     | 0        | Never said DONE, hit the 8-turn cap; last reply was just "TOOL RESULT: 1" — got stuck in a loop |
 | 6   | agent    | 8     | 6213   | 8     | 0        | Identical failure to Run 5 (same stats) — stuck again, no final answer produced |
 
-Verdict - for THIS task I would ship the (workflow) because: the workflow scored a perfect 7/7 on all three runs with far fewer tokens, while the agent only succeeded once (4/7, not even a perfect score) and completely failed twice (0/7), getting stuck without ever producing a final answer.
-Cost: the agent used far more tokens — roughly 2,600 to 6,200 tokens per run, compared to about 750-800 for the workflow (3-8x more expensive).
-Reliability: the workflow was perfectly consistent (7/7 all three times). The agent was unreliable — one partial success and two total failures where it never completed the task within the turn limit.
-One thing that surprised me: how badly the agent could get stuck — two out of three runs ended with it repeatedly calling a tool (count_items, returning "1") without ever producing a DONE response, even though the protocol was clearly spelled out in the system prompt.
+Verdict: For this task, I would ship the workflow. It scored a perfect 7/7 in all three runs and used far fewer tokens. The agent succeeded only once (4/7). It completely failed twice (0/7). It never reached a final answer.
+Cost: The agent used far more tokens, about 2,600 to 6,200 per run. The workflow used about 750–800 tokens per run.
+Reliability: The workflow was perfectly consistent. It scored 7/7 in all three runs. The agent was unreliable. It had one partial success and two total failures. It never completed the task.
+One thing that surprised me: The agent performed much worse than I expected. In two out of three runs, it repeatedly called the 'count_items' tool, which kept returning "1". It never produced a 'DONE' response.
