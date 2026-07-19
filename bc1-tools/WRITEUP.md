@@ -1,62 +1,4 @@
-# Task 1 — environment verified
-── step 1: request≈724 chars → chose list_notes {}
-          tool returned 71 chars
-── step 2: request≈831 chars → chose search_notes_verbose {'query': 'demo'}
-          tool returned 668 chars
-── step 3: request≈1562 chars → chose None {}
-          tool returned 24 chars
-── step 4: request≈2032 chars → chose finish {}
-
-ANSWER: Your notes indicate that your capstone demo will be a live run with a visible trace and rollback story, fitting within eight minutes. The demo concept involves a triage agent for helpdesk tickets, but there's currently a blocker with OpenRouter lacking an embedding endpoint, so retrieval is limited to keyword-only for now.
-
-STATS: {'calls': 4, 'tokens': 1560, 'cache_hits': 0}
-
-# Task 2 — orientation reading notes
-1. What is the actual difference between a workflow and an agent?
-Workflows provide predictability, while agents offer flexibility for open-ended tasks. A workflow follows predefined code paths. The developer decides the sequence of steps and the tools to use in advance. In contrast, an agent allows the LLM to decide which actions and tools to use. It also decides the order of those actions to achieve the goal.
-
-2. When is an agent the wrong choice?
-An agent is the wrong choice when a simple solution or a deterministic workflow can reliably solve the problem. For repeatable tasks with predictable steps, workflows are usually the best choice.
-
-3. What is a tool, in the technical sense used here?
-Tools help an agent perceive its environment and act on it. A tool is an external capability that lets an LLM interact with its environment. Examples include searching the web, running Python code, querying databases, and calling APIs. Tools allow agents to observe, take action, and modify their environment.
-
-4. What makes an agentic loop terminate safely?
-A safe agentic loop should have one or more of the following:
-- Clear goal metrics.
-- Explicit stopping conditions.
-- Limits on time, cost, or iterations.
-It should also run in a controlled environment with proper permissions and verification. This prevents the agent from running indefinitely.
-
-5. What is one failure mode you expect to encounter?
-To my mind, one likely failure mode is selecting the wrong tool. This can lead to unnecessary iterations or incorrect results.
-
-# Task 3 — Mini-Build 0 submission". Complete
-
-Repo: https://github.com/Agentic-Systems-Summer-2026/collective-assignment-behrouzzzz
-
-
-| Run | Version  | Calls | Tokens | Turns | Score /7 | Notes |
-|-----|----------|-------|--------|-------|----------|-------|
-| 1   | workflow | 3     | 737    | n/a   | 7        | Clean run, no issues |
-| 2   | workflow | 3     | 803    | n/a   | 7        | Slightly more tokens, same correctness |
-| 3   | workflow | 3     | 737    | n/a   | 7        | Identical to Run 1 |
-| 4   | agent    | 4     | 2608   | 4     | 4        | Dropped the health inspection item entirely; espresso deadline field got overwritten with a duplicate "Owner:" label instead of the deadline |
-| 5   | agent    | 8     | 6213   | 8     | 0        | Never said DONE, hit the 8-turn cap; last reply was just "TOOL RESULT: 1" — got stuck in a loop |
-| 6   | agent    | 8     | 6213   | 8     | 0        | Identical failure to Run 5 (same stats) — stuck again, no final answer produced |
-
-Verdict: For this task, I would ship the workflow. It scored a perfect 7/7 in all three runs and used far fewer tokens. The agent succeeded only once (4/7). It completely failed twice (0/7). It never reached a final answer.
-Cost: The agent used far more tokens, about 2,600 to 6,200 per run. The workflow used about 750–800 tokens per run.
-Reliability: The workflow was perfectly consistent. It scored 7/7 in all three runs. The agent was unreliable. It had one partial success and two total failures. It never completed the task.
-One thing that surprised me: The agent performed much worse than I expected. In two out of three runs, it repeatedly called the 'count_items' tool, which kept returning "1". It never produced a 'DONE' response.
-
-
-
-# Task 4  Canvas assignment: "Build Challenge 1 — Tool/Function Calling"
-
-Repo: https://github.com/Agentic-Systems-Summer-2026/collective-assignment-behrouzzzz
-
-# 4.1.Tool Designs
+# 1.Tool Designs
 
 ## search_notes_snippet(query)
 Returns matching lines paired with their filename, instead of full documents.
@@ -72,7 +14,7 @@ The agent needs this to save output, like a reminder or a summary, as part of a 
 
 
 
-# 4.2.Trace — Full End-to-End Run
+# 2.Trace — Full End-to-End Run
 
 repo/bc1-tools $ python3 agent.py "what do my notes say about the demo?"
 ── step 1: request≈724 chars → chose list_notes {}
@@ -145,7 +87,7 @@ STATS: {'calls': 6, 'tokens': 3716, 'cache_hits': 0}
 
 The model picked "note_writer" on its own and on the first step. There was not hard coding on my end. The task was done in two steps.
 
-# 4.3.Token-Efficiency Redesign (Before/After)
+# 3.Token-Efficiency Redesign (Before/After)
 
 I ran the exact same task twice: once before "search_notes_snippet" existed, and once after.
 
@@ -167,7 +109,7 @@ The model did choose "search_notes_snippet" first, instead of the old verbose to
 ## Takeaway
 A more efficient tool doesn't automatically make the agent use it efficiently. The tool description in "TOOLS_SPEC" never told the model it could skip reading the full note after getting a snippet. Wording controls behavior is the real lesson here, not just the tool code itself.
 
-# 4.4.Delegation Log
+# 4.Delegation Log
 
 ## AI used
 OpenClaw, running Claude Sonnet 4.6 (Qwen3 Coder 30B as fallback).
