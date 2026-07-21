@@ -38,3 +38,16 @@ Verdict: For this task, I would ship the workflow. It scored a perfect 7/7 in al
 Cost: The agent used far more tokens, about 2,600 to 6,200 per run. The workflow used about 750–800 tokens per run.
 Reliability: The workflow was perfectly consistent. It scored 7/7 in all three runs. The agent was unreliable. It had one partial success and two total failures. It never completed the task.
 One thing that surprised me: The agent performed much worse than I expected. In two out of three runs, it repeatedly called the 'count_items' tool, which kept returning "1". It never produced a 'DONE' response.
+
+## Day 3 - Capstone Proposal
+- **What I built:**
+    - I write the capstone proposal.
+        - The main challenge is how to import "human-in-the-loop" while automating the whole process as a "loop," not turning it into a "workflow," as well as keeping your agent simple, agile, and efficient!
+
+- **Where AI helped, and how I verified its output:**
+    - I used AI to review my proposal.
+    - AI tends to complicate the architecture, adding new tools, and claim unrealistic risks/mitigation.
+    - AI tends to provide complex test case scenarios that are not aligned with educational projects.
+    - Honestly, it takes me too much time to convince the AI to follow my way. ;) 
+
+ 
