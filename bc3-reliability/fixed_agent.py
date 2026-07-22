@@ -60,6 +60,7 @@ def classify_with_retry(request_text: str) -> dict:
     Call the model, parse JSON, retry on timeout/error or bad JSON.
     Returns {"risk": ..., "reason": ...} or raises RuntimeError after all attempts.
     """
+  
     messages = [{"role": "user", "content": CLASSIFY_PROMPT + request_text}]
     last_error = None
 
@@ -136,6 +137,7 @@ def main():
     # Process pending items, appending checkpoint entries as we go
     for item in pending:
         item_id = item["id"]
+        print(f"Processing {item_id}...")
         try:
             verdict = classify_with_retry(item["request"])
             entry = {

@@ -61,3 +61,18 @@ One thing that surprised me: The agent performed much worse than I expected. In 
 - **Where AI helped, and how I verified its output:**
     - I used AI to create new Python code and a new prompt file that fixed the problem based on a prompt provided by me.
     - I checked the new fixed Python code and the prompt file to be sure they align with the assignment’s requirements and meet selected approaches’ principles.
+
+
+## Day 4 - Build Challenge 3 — Reliability & Rollback
+- **What I built:** 
+    - ]
+    I built a fixed agent for BC3. It adds retries, timeouts, JSON checks, a checkpoint file, and safe report writes to the broken starter.
+
+- **What I changed:** 
+    - Adding a timeout and 3 retries with backoff on each model call. Cleannig and validating the JSON reply before trusting it. Writing the report to a temp file first, then swapping it in only after a full successful run. Adding a checkpoint file that saves after every item, so a restart picks up where it left off. Logging every failure with its reason.
+
+- **Where AI helped, and how I verified its output:** 
+    - I used AI to fix all 6 flaws. Before running it, I checked the code. I recorded two real recovery demos to sure the code  work properly.
+
+
+
