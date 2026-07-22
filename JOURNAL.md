@@ -50,4 +50,14 @@ One thing that surprised me: The agent performed much worse than I expected. In 
     - AI tends to provide complex test case scenarios that are not aligned with educational projects.
     - Honestly, it takes me too much time to convince the AI to follow my way. ;) 
 
- 
+## Day 4 - Build Challenge 2: Context & Prompt Design
+- **What I built:**
+    - I selected the just-in-time retrieval technique and system-prompt altitude one to fix the context overload problem.
+        -	The main challenge for me was which techniques should be selected and why.
+
+- **What I changed:**
+    - Running `COURSE_MODEL="gemma4-small-12B" python3 bc2-context/overload_task.py` failed because there is no model with this name. It also failed again when I changed the model name to “gemma4-small-12B,” so I was forced to change the model manually by writing a command in the terminal in every run.
+
+- **Where AI helped, and how I verified its output:**
+    - I used AI to create new Python code and a new prompt file that fixed the problem based on a prompt provided by me.
+    - I checked the new fixed Python code and the prompt file to be sure they align with the assignment’s requirements and meet selected approaches’ principles.
