@@ -1,0 +1,387 @@
+[
+  {
+    "id": "http://zotero.org/users/11629302/items/83TKCLMJ",
+    "type": "article-journal",
+    "abstract": "Abstract\n            \n              Agentic AI represents a transformative shift in artificial intelligence, but its rapid advancement has led to a fragmented understanding, often conflating modern neural systems with outdated symbolic models—a practice known as\n              conceptual retrofitting\n              . This survey cuts through this confusion by introducing a novel dual-paradigm framework that categorizes agentic systems into two distinct lineages: the symbolic/classical (relying on algorithmic planning and persistent state) and the neural/generative (leveraging stochastic generation and prompt-driven orchestration). Through a systematic PRISMA-based review of 90 studies (2018–2025), we provide a comprehensive analysis structured around this framework across three dimensions: (1) the theoretical foundations and architectural principles defining each paradigm; (2) domain-specific implementations in healthcare, finance, and robotics, demonstrating how application constraints dictate paradigm selection; and (3) paradigm-specific ethical and governance challenges, revealing divergent risks and mitigation strategies. Our analysis reveals that the choice of paradigm is strategic: symbolic systems dominate safety-critical domains (e.g., healthcare), while neural systems prevail in adaptive, data-rich environments (e.g., finance). Furthermore, we identify critical research gaps, including a significant deficit in governance models for symbolic systems and a pressing need for hybrid neuro-symbolic architectures. The findings culminate in a strategic roadmap arguing that the future of Agentic AI lies not in the dominance of one paradigm, but in their intentional integration to create systems that are both\n              adaptable\n              and\n              reliable\n              . This work provides the essential conceptual toolkit to guide future research, development, and policy toward robust and trustworthy hybrid intelligent systems.",
+    "container-title": "Artificial Intelligence Review",
+    "DOI": "10.1007/s10462-025-11422-4",
+    "ISSN": "1573-7462",
+    "issue": "1",
+    "journalAbbreviation": "Artif Intell Rev",
+    "language": "en",
+    "page": "11",
+    "source": "DOI.org (Crossref)",
+    "title": "Agentic AI: a comprehensive survey of architectures, applications, and future directions",
+    "title-short": "Agentic AI",
+    "URL": "https://link.springer.com/10.1007/s10462-025-11422-4",
+    "volume": "59",
+    "author": [
+      {
+        "family": "Abou Ali",
+        "given": "Mohamad"
+      },
+      {
+        "family": "Dornaika",
+        "given": "Fadi"
+      },
+      {
+        "family": "Charafeddine",
+        "given": "Jinan"
+      }
+    ],
+    "accessed": {
+      "date-parts": [
+        [
+          "2026",
+          7,
+          22
+        ]
+      ]
+    },
+    "issued": {
+      "date-parts": [
+        [
+          "2025",
+          11,
+          14
+        ]
+      ]
+    },
+    "source_id": "AbouAli2025",
+    "filename": "AbouAli2025.pdf"
+  },
+  {
+    "id": "http://zotero.org/users/11629302/items/VHYD7GBK",
+    "type": "article-journal",
+    "abstract": "Abstract\n              Advances of large models (LMs) have catalyzed a paradigm shift in artificial intelligence, enabling the development of autonomous agents capable of complex reasoning, planning, and interaction with both digital and physical environments. As this field has expanded at an unprecedented rate, a comprehensive and structured overview is essential to consolidate current knowledge and guide future innovations. This survey addresses this need by providing a holistic re-view of LM-based artificial intelligence (AI) agents. First, we deconstruct the core architecture of modern LM-based agents and examine the interplay among key modules: Reasoning, perception, memory, planning, action, and learning. Subsequently, we systematically analyze the evaluation landscape, summarizing current benchmarks, metrics, and module-specific performance trade-offs. Furthermore, we sur-vey the transformative impact of these agents across a broad spectrum of applications, ranging from digital domains to embodied systems. The survey concludes by identifying critical challenges and future directions, thus offering a roadmap for the next generation of LM-based AI agents.",
+    "container-title": "Tsinghua Science and Technology",
+    "DOI": "10.26599/TST.2026.9010072",
+    "ISSN": "1007-0214, 1878-7606",
+    "language": "en",
+    "source": "DOI.org (Crossref)",
+    "title": "A survey of large-model-based AI agents",
+    "URL": "https://www.sciopen.com/article/10.26599/TST.2026.9010072",
+    "author": [
+      {
+        "family": "Qin",
+        "given": "Chuan"
+      },
+      {
+        "family": "Jin",
+        "given": "Long"
+      }
+    ],
+    "accessed": {
+      "date-parts": [
+        [
+          "2026",
+          7,
+          22
+        ]
+      ]
+    },
+    "issued": {
+      "date-parts": [
+        [
+          "2026",
+          6
+        ]
+      ]
+    },
+    "source_id": "Qin2026",
+    "filename": "Qin2026.pdf"
+  },
+  {
+    "id": "http://zotero.org/users/11629302/items/G3JX64DD",
+    "type": "article-journal",
+    "abstract": "With the rapid development of Large Language Models (LLMs), LLM-based agents have been widely adopted in various fields, becoming essential for autonomous decision-making and interactive tasks. However, current work typically relies on prompt design or fine-tuning strategies applied to vanilla LLMs, which often leads to limited effectiveness in complex agent-related environments. Although numerous recent studies have explored various strategies to optimize LLM-based agents for complex agent tasks, a systematic review summarizing and comparing these methods from a holistic perspective remains lacking. In this survey, we provide a comprehensive review of LLM-based agent optimization approaches, categorizing them into parameter-driven and parameter-free methods. We first focus on parameter-driven optimization, covering fine-tuning-based optimization, reinforcement learning-based optimization, and hybrid strategies, analyzing key aspects such as trajectory data construction, reward function design, and optimization algorithms. Additionally, we briefly discuss parameter-free strategies that optimize agent behavior through prompt engineering and external knowledge retrieval. Finally, we summarize the evaluation for agents, review key applications of LLM-based agents, and discuss the major challenges and promising future directions. A curated collection of the surveyed works is provided at https://github.com/YoungDubbyDu/LLM-Agent-Optimization.",
+    "container-title": "ACM Computing Surveys",
+    "DOI": "10.1145/3789261",
+    "ISSN": "0360-0300, 1557-7341",
+    "issue": "9",
+    "journalAbbreviation": "ACM Comput. Surv.",
+    "language": "en",
+    "page": "1-37",
+    "source": "DOI.org (Crossref)",
+    "title": "A Survey on the Optimization of Large Language Model-based Agents",
+    "URL": "https://dl.acm.org/doi/10.1145/3789261",
+    "volume": "58",
+    "author": [
+      {
+        "family": "Du",
+        "given": "Shangheng"
+      },
+      {
+        "family": "Zhao",
+        "given": "Jiabao"
+      },
+      {
+        "family": "Shi",
+        "given": "Jinxin"
+      },
+      {
+        "family": "Xie",
+        "given": "Zhentao"
+      },
+      {
+        "family": "Jiang",
+        "given": "Xin"
+      },
+      {
+        "family": "Bai",
+        "given": "Yanhong"
+      },
+      {
+        "family": "He",
+        "given": "Liang"
+      }
+    ],
+    "accessed": {
+      "date-parts": [
+        [
+          "2026",
+          7,
+          22
+        ]
+      ]
+    },
+    "issued": {
+      "date-parts": [
+        [
+          "2026",
+          7,
+          31
+        ]
+      ]
+    },
+    "source_id": "Du2026",
+    "filename": "Du2026.pdf"
+  },
+  {
+    "id": "http://zotero.org/users/11629302/items/N2AXQLRE",
+    "type": "article-journal",
+    "abstract": "Abstract\n            \n              Agentic artificial intelligence (AI) systems, designed to autonomously reason, plan, and invoke tools, have shown promise in healthcare, yet systematic benchmarking of their real-world performance remains limited. In this study, we evaluate two such systems: the open-source OpenManus, built on Meta’s Llama-4 and extended with medically customized agents; and Manus, a proprietary agent system employing a multistep planner-executor-verifier architecture. Both systems were assessed across three benchmark families:\n              AgentClinic\n              , a stepwise dialog-based diagnostic simulation;\n              MedAgentsBench\n              , a knowledge-intensive medical QA dataset; and\n              Humanity’s Last Exam\n              (HLE), a suite of challenging text-only and multimodal questions. Despite access to advanced tools (e.g., web browsing, code development and execution, and text file editing) agent systems yielded only modest accuracy gains over baseline LLMs, reaching 60.3% and 28.0% in AgentClinic MedQA and MIMIC, 30.3% on MedAgentsBench, and 8.6% on HLE text. Multimodal accuracy remained low (15.5% on multimodal HLE, 29.2% on AgentClinic NEJM), while resource demands increased substantially, with >10× token usage and >2× latency. Although 89.9% of hallucinations were filtered by in-agent safeguards, hallucinations remained prevalent. These findings reveal that current agentic designs offer modest performance benefits at significant computational and workflow cost, underscoring the need for more accurate, efficient, and clinically viable agent systems.",
+    "container-title": "npj Digital Medicine",
+    "DOI": "10.1038/s41746-026-02443-6",
+    "ISSN": "2398-6352",
+    "issue": "1",
+    "journalAbbreviation": "npj Digit. Med.",
+    "language": "en",
+    "page": "259",
+    "source": "DOI.org (Crossref)",
+    "title": "Benchmarking large language model-based agent systems for clinical decision tasks",
+    "URL": "https://www.nature.com/articles/s41746-026-02443-6",
+    "volume": "9",
+    "author": [
+      {
+        "family": "Liu",
+        "given": "Yunsong"
+      },
+      {
+        "family": "Carrero",
+        "given": "Zunamys I."
+      },
+      {
+        "family": "Jiang",
+        "given": "Xiaofeng"
+      },
+      {
+        "family": "Ferber",
+        "given": "Dyke"
+      },
+      {
+        "family": "Wölflein",
+        "given": "Georg"
+      },
+      {
+        "family": "Zhang",
+        "given": "Li"
+      },
+      {
+        "family": "Jayabalan",
+        "given": "Sanddhya"
+      },
+      {
+        "family": "Lenz",
+        "given": "Tim"
+      },
+      {
+        "family": "Hui",
+        "given": "Zhouguang"
+      },
+      {
+        "family": "Kather",
+        "given": "Jakob Nikolas"
+      }
+    ],
+    "accessed": {
+      "date-parts": [
+        [
+          "2026",
+          7,
+          22
+        ]
+      ]
+    },
+    "issued": {
+      "date-parts": [
+        [
+          "2026",
+          2,
+          18
+        ]
+      ]
+    },
+    "source_id": "Liu2026",
+    "filename": "Liu2026.pdf"
+  },
+  {
+    "id": "http://zotero.org/users/11629302/items/FLY2BBSL",
+    "type": "article-journal",
+    "container-title": "Science China Information Sciences",
+    "DOI": "10.1007/s11432-024-4222-0",
+    "ISSN": "1674-733X, 1869-1919",
+    "issue": "2",
+    "journalAbbreviation": "Sci. China Inf. Sci.",
+    "language": "en",
+    "page": "121101",
+    "source": "DOI.org (Crossref)",
+    "title": "The rise and potential of large language model based agents: a survey",
+    "title-short": "The rise and potential of large language model based agents",
+    "URL": "https://link.springer.com/10.1007/s11432-024-4222-0",
+    "volume": "68",
+    "author": [
+      {
+        "family": "Xi",
+        "given": "Zhiheng"
+      },
+      {
+        "family": "Chen",
+        "given": "Wenxiang"
+      },
+      {
+        "family": "Guo",
+        "given": "Xin"
+      },
+      {
+        "family": "He",
+        "given": "Wei"
+      },
+      {
+        "family": "Ding",
+        "given": "Yiwen"
+      },
+      {
+        "family": "Hong",
+        "given": "Boyang"
+      },
+      {
+        "family": "Zhang",
+        "given": "Ming"
+      },
+      {
+        "family": "Wang",
+        "given": "Junzhe"
+      },
+      {
+        "family": "Jin",
+        "given": "Senjie"
+      },
+      {
+        "family": "Zhou",
+        "given": "Enyu"
+      },
+      {
+        "family": "Zheng",
+        "given": "Rui"
+      },
+      {
+        "family": "Fan",
+        "given": "Xiaoran"
+      },
+      {
+        "family": "Wang",
+        "given": "Xiao"
+      },
+      {
+        "family": "Xiong",
+        "given": "Limao"
+      },
+      {
+        "family": "Zhou",
+        "given": "Yuhao"
+      },
+      {
+        "family": "Wang",
+        "given": "Weiran"
+      },
+      {
+        "family": "Jiang",
+        "given": "Changhao"
+      },
+      {
+        "family": "Zou",
+        "given": "Yicheng"
+      },
+      {
+        "family": "Liu",
+        "given": "Xiangyang"
+      },
+      {
+        "family": "Yin",
+        "given": "Zhangyue"
+      },
+      {
+        "family": "Dou",
+        "given": "Shihan"
+      },
+      {
+        "family": "Weng",
+        "given": "Rongxiang"
+      },
+      {
+        "family": "Qin",
+        "given": "Wenjuan"
+      },
+      {
+        "family": "Zheng",
+        "given": "Yongyan"
+      },
+      {
+        "family": "Qiu",
+        "given": "Xipeng"
+      },
+      {
+        "family": "Huang",
+        "given": "Xuanjing"
+      },
+      {
+        "family": "Zhang",
+        "given": "Qi"
+      },
+      {
+        "family": "Gui",
+        "given": "Tao"
+      }
+    ],
+    "accessed": {
+      "date-parts": [
+        [
+          "2026",
+          7,
+          22
+        ]
+      ]
+    },
+    "issued": {
+      "date-parts": [
+        [
+          "2025",
+          2
+        ]
+      ]
+    },
+    "source_id": "Xi2025",
+    "filename": "Xi2025.pdf"
+  }
+]
