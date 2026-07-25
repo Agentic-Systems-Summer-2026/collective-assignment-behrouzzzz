@@ -16,6 +16,8 @@ npm-debug.log*
 .checkpoints/
 *.log
 **/logs/
+**/answer/
+answer*.md
 __pycache__/
 *.pyc
 
