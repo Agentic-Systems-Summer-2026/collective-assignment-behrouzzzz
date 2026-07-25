@@ -15,5 +15,9 @@ npm-debug.log*
 .cache/
 .checkpoints/
 *.log
+**/logs/
 __pycache__/
 *.pyc
+
+# Local Netlify folder
+.netlify
