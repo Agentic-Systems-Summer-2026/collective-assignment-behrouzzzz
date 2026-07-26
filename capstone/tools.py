@@ -2,6 +2,7 @@
 
 import json
 import re
+import unicodedata
 import hashlib
 from pathlib import Path
 from pypdf import PdfReader
@@ -12,6 +13,16 @@ SOURCES_DIR = BASE_DIR / "sources"
 ANSWERS_DIR = BASE_DIR / "answers"
 
 _TEXT_CACHE: dict[str, str] = {}
+
+SEARCH_MAX_HITS = 20  # canonical matching hits far more often than the old per-line
+    # search, so an uncapped result set could flood the agent's context.
+SEARCH_SNIPPET_CHARS = 320  # ceiling on one returned snippet, comfortably above the
+    # ~200-char guidance the agent gets for a single quote.
+TERMS_WINDOW_SENTENCES = 3  # adjacent sentences an all-terms match may span; 3 covers the
+    # common "caption names it, next sentence measures it" pattern without letting a
+    # match drift so far apart that the passage no longer reads as one statement.
+SNIPPET_LEAD_CHARS = 60  # context kept BEFORE an over-long match; small on purpose so
+    # the rest of the matched sentence survives the clamp (see _snippet).
 
 _LIGATURES = {
     "ﬀ": "ff",
@@ -67,6 +78,70 @@ def _normalize(text: str) -> str:
     text = re.sub(r"\s*-\s*\n\s*", "", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
+
+def _canon(text: str) -> str:
+    """
+    Canonical form for comparison: Unicode-folded, then stripped of every
+    whitespace and dash character, and lowercased.
+
+    PDF text extraction corrupts word spacing in both directions, and neither
+    direction is a property of the document -- both are noise from a lossy
+    process. Measured across the five capstone sources, roughly 8% of
+    quotable sentences carry at least one such corruption (13% in the worst
+    source). Three forms have been observed in real runs:
+
+        "highlight t hat"  a spurious space injected inside a word
+        "wereﬁltered"      a space lost where a ligature met a word boundary
+        "multiagent"       a hyphen lost when a word was split over two lines
+
+    Comparing on raw extracted spacing means the reader who quotes what the
+    sentence actually says is REJECTED, while only a reader who reproduces
+    the corruption is accepted -- exactly backwards, and the direct cause of
+    a real run failing on a correct quote.
+
+    NFKC folding and the broad dash class matter for a second reason: the
+    same PDF extracted by different pypdf versions does not yield identical
+    text (two environments differed by 61 characters on one source here), and
+    the differences are exactly these -- ligature spellings, dash variants,
+    exotic space characters. Folding them means a quote verified in one
+    environment still verifies in another, instead of the check depending on
+    which library happened to read the file.
+
+    None of this weakens what the check is for: the words themselves, in
+    order, must still be present. A paraphrase, an altered number, an
+    inserted negation or an invented sentence all still fail.
+    """
+    folded = unicodedata.normalize("NFKC", _normalize(text))
+    out = []
+    for ch in folded:
+        if ch.isspace() or unicodedata.category(ch) in ("Pd", "Cf"):
+            continue  # Pd = every dash/hyphen variant; Cf = soft hyphen and friends
+        out.append(ch)
+    return "".join(out).lower()
+
+
+def _canon_with_map(text: str) -> tuple[str, list[int]]:
+    """
+    Canonical form plus, for each canonical character, its index in the
+    normalized text -- so a match found in canonical space can be reported
+    back as a real, quotable span of the original.
+
+    NFKC can map one character to several (the ﬁ ligature becomes two), so
+    each produced character points back at the single source character it
+    came from; a span reconstructed from those indices still covers the
+    original text exactly.
+    """
+    norm = _normalize(text)
+    chars: list[str] = []
+    idx: list[int] = []
+    for i, ch in enumerate(norm):
+        for sub in unicodedata.normalize("NFKC", ch):
+            if sub.isspace() or unicodedata.category(sub) in ("Pd", "Cf"):
+                continue
+            chars.append(sub.lower())
+            idx.append(i)
+    return "".join(chars), idx
 
 
 def _format_in_text_citation(entry: dict) -> str:
@@ -142,26 +217,187 @@ def lookup_citation(source_id: str) -> dict:
 def read_source(name: str) -> dict:
     try:
         text = _get_text_by_filename(name)
-    except FileNotFoundError as e:
-        return {"ok": False, "error": str(e)}
+    except FileNotFoundError:
+        # List what IS available. A real run invented a filename that looked
+        # plausible ("Zhang2025.pdf"), got back only "not found", and spent
+        # further turns re-listing and guessing. The error can answer the
+        # question it provokes.
+        available = [p.name for p in sorted(SOURCES_DIR.iterdir()) if p.is_file()]
+        return {"ok": False,
+                "error": f"No source named {name!r}. Available sources: {', '.join(available)}"}
     return {"ok": True, "text": text}
 
 
-def search_sources(query: str) -> list[dict]:
-    query_lower = query.lower()
-    hits = []
+def search_sources(query: str, max_hits: int = SEARCH_MAX_HITS) -> dict:
+    """
+    Two-stage search over every source.
+
+    Stage 1 "phrase": the whole query as one contiguous span.
+    Stage 2 "terms":  only if stage 1 found nothing -- sentences containing
+                      ALL the query's words, in any order.
+
+    Stage 2 exists because a model asking about several things at once writes
+    a multi-concept query ("OpenManus MedAgentsBench accuracy") and expects
+    keyword-search behaviour, while a bare substring search answers a
+    different question -- does this exact string occur? -- and returns
+    nothing even when one sentence covers all three terms. A real run issued
+    that identical query three times and never recovered. Matching what the
+    caller means removes the mismatch instead of documenting around it.
+
+    Both stages compare canonical text (see _canon), so extraction artifacts
+    in spacing or hyphenation cannot hide a passage that is really there.
+    Every returned snippet is a real span of the source and will pass
+    verify_quote as-is.
+    """
+    q_canon = _canon(query)
+    if not q_canon:
+        return {"ok": False, "error": "Empty query."}
+
+    hits, total = _search_phrase(q_canon, max_hits)
+    mode = "phrase"
+
+    if not hits:
+        terms = _query_terms(query)
+        if len(terms) > 1:
+            hits, total = _search_terms(terms, max_hits)
+            mode = "terms"
+
+    result = {"ok": True, "hits": hits, "total_hits": total, "match_mode": mode}
+    if mode == "terms" and hits:
+        result["note"] = ("No passage contained that exact phrase, so these are "
+                          "sentences containing all of its words instead.")
+    if total > len(hits):
+        result["truncated"] = True
+    return result
+
+
+_STOPWORDS = {"the", "and", "for", "with", "that", "this", "from", "into",
+              "versus", "vs", "between", "their", "its", "did", "does", "how",
+              "what", "which", "any", "are", "was", "were", "have", "has"}
+
+
+def _query_terms(query: str) -> list[str]:
+    """
+    Content words of a query, for the all-terms fallback.
+
+    Split on hyphens as well as whitespace: canonicalisation strips hyphens,
+    so "symbolic-vs-neural" would otherwise collapse into the single
+    unsearchable token "symbolicvsneural". Connectives are dropped because
+    they carry no locating power and, matched as substrings, would hit
+    inside unrelated words.
+    """
+    raw = re.split(r"[\s\-/]+", query.lower())
+    out = []
+    for tok in raw:
+        t = _canon(tok)
+        if len(t) >= 3 and t not in _STOPWORDS:
+            out.append(t)
+    return out
+
+
+def _iter_sources():
     for path in sorted(SOURCES_DIR.iterdir()):
         if not path.is_file():
             continue
         try:
-            text = _get_text_by_filename(path.name)
+            yield path.name, _get_text_by_filename(path.name)
         except FileNotFoundError:
             continue
-        for line in text.splitlines():
-            line = line.strip()
-            if line and query_lower in line.lower():
-                hits.append({"file": path.name, "line": line})
-    return hits
+
+
+def _search_phrase(q_canon: str, max_hits: int) -> tuple[list[dict], int]:
+    hits: list[dict] = []
+    total = 0
+    for name, text in _iter_sources():
+        canon, idx = _canon_with_map(text)
+        norm = _normalize(text)
+        start = 0
+        while True:
+            i = canon.find(q_canon, start)
+            if i == -1:
+                break
+            total += 1
+            start = i + max(1, len(q_canon))
+            if len(hits) < max_hits:
+                at = idx[i]
+                end = idx[min(i + len(q_canon), len(idx)) - 1] + 1
+                hits.append({"file": name, "line": _snippet(norm, at, end - at)})
+    return hits, total
+
+
+def _search_terms(terms: list[str], max_hits: int) -> tuple[list[dict], int]:
+    """
+    Passages containing all the terms, searched over a short sliding window of
+    ADJACENT sentences rather than one sentence at a time.
+
+    Requiring every term inside a single sentence sounds strict-but-safe and
+    is neither: prose routinely spreads one fact across neighbours, and figure
+    captions almost always do. A real run asked for OpenManus / overall /
+    accuracy / MedAgentsBench and got nothing, because the caption names the
+    benchmark in one sentence and reports the number in the next. The passage
+    was there; the sentence boundary hid it.
+
+    The window is capped at SEARCH_SNIPPET_CHARS so a returned span stays
+    quotable, and joining consecutive sentences with a single space
+    reconstructs the normalized text exactly -- _split_sentences consumes that
+    separating space -- so the span really is a contiguous substring and
+    passes verify_quote as-is.
+    """
+    hits: list[dict] = []
+    total = 0
+    for name, text in _iter_sources():
+        norm = _normalize(text)
+        sents = _split_sentences(norm)
+        i = 0
+        while i < len(sents):
+            step = 1
+            for w in range(1, TERMS_WINDOW_SENTENCES + 1):
+                if i + w > len(sents):
+                    break
+                span = " ".join(sents[i:i + w]).strip()
+                if len(span) > SEARCH_SNIPPET_CHARS:
+                    break
+                if all(t in _canon(span) for t in terms):
+                    total += 1
+                    if len(hits) < max_hits:
+                        hits.append({"file": name, "line": span})
+                    step = w  # don't re-report the same passage from inside itself
+                    break
+            i += step
+    return hits, total
+
+
+def _split_sentences(norm: str) -> list[str]:
+    return [s for s in re.split(r"(?<=[.]) ", norm) if s.strip()]
+
+
+def _snippet(norm: str, at: int, length: int) -> str:
+    """
+    Expands a match to its surrounding sentence, clamped to SEARCH_SNIPPET_CHARS.
+
+    The result is always a contiguous span of the normalized text, so quoting
+    it as-is passes verify_quote. No ellipsis is added, since a marker absent
+    from the source would break the quote. When the sentence is too long to
+    return whole the window is biased FORWARD from the match: sentence
+    detection keys on ". ", which tables and captions lack, so a match just
+    after a table would otherwise drag in stray cell values and lose the tail
+    of its own sentence -- and the tail is usually where the substance is.
+    """
+    left = norm.rfind(". ", 0, at)
+    left = 0 if left == -1 else left + 2
+    right = norm.find(". ", at + length)
+    right = len(norm) if right == -1 else right + 1
+
+    if right - left > SEARCH_SNIPPET_CHARS:
+        left = max(left, at - SNIPPET_LEAD_CHARS)
+        right = min(right, left + SEARCH_SNIPPET_CHARS)
+        sp = norm.find(" ", left, left + 25)
+        if sp != -1 and sp < at:
+            left = sp + 1
+        sp = norm.rfind(" ", right - 25, right)
+        if sp != -1 and sp > at + length:
+            right = sp
+    return norm[left:right].strip()
 
 
 def _answer_file_path(answer_text: str) -> Path:
@@ -180,7 +416,7 @@ def verify_quote(source_id: str, quote: str) -> dict:
     except FileNotFoundError as e:
         return {"ok": False, "error": str(e)}
 
-    if _normalize(quote) not in _normalize(source_text):
+    if _canon(quote) not in _canon(source_text):
         return {"ok": False, "error": "Quote not found verbatim in source (after normalization)."}
 
     return {"ok": True}

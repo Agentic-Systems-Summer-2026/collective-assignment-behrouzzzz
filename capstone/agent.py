@@ -14,6 +14,9 @@ MAX_TURNS = 8  # base budget, proven sufficient for single-source questions (Cas
 TURNS_PER_EXTRA_SOURCE = 4  # extra allowance once a 2nd, 3rd, ... distinct source is touched
 MAX_TURNS_HARD_CAP = 20  # absolute ceiling regardless of source count, so cost can't run away
 MAX_EVAL_REJECTIONS = 2
+MAX_TECHNICAL_FINISH_FAILURES = 2  # charged finish attempts that failed purely technically
+    # before the run gives up on the evaluator entirely. The note sent back after the first
+    # one invites exactly one resubmit, so 2 is "you tried again and it was still down".
 MAX_TECHNICAL_FINISH_RETRIES = 3  # a purely-technical finish failure (e.g. an evaluator network
     # timeout, already excluded from MAX_EVAL_REJECTIONS) also must not silently cost a turn from
     # the exploration budget above -- otherwise a network blip on the LAST available turn kills an
@@ -30,12 +33,19 @@ TOOLS_SPEC = """Available tools — reply with exactly ONE JSON object per turn,
     -> [{"file": "...", "id": "..." or null}, ...] every source and its id
 
 {"tool": "search_sources", "query": "keyword"}
-    -> [{"file": "...", "line": "..."}, ...] lines containing that EXACT text, across all sources.
-       "query" must be a short, distinctive keyword or phrase (1-4 words) likely
-       to appear verbatim on a single line — NOT a full sentence or a
-       restatement of the question, since a whole sentence almost never
-       matches one extracted PDF line exactly. If a search comes up empty,
-       try a shorter or different keyword, or use read_source instead.
+    -> {"ok": true, "hits": [{"file": "...", "line": "..."}, ...],
+        "total_hits": N, "match_mode": "phrase" | "terms"}
+       First tries your query as one exact phrase. If nothing contains that
+       phrase, it retries as separate words and returns sentences containing
+       ALL of them, telling you so via "match_mode": "terms". So a query
+       naming several things at once still works. Spacing and hyphens are
+       ignored when matching, so a passage is found even where the PDF
+       extracted it oddly. Keep queries short and distinctive (roughly 1-4
+       words) — a whole sentence or a restatement of the question rarely
+       matches, because the words you would use to describe an idea are
+       rarely the paper\'s own words. If a search returns nothing, that text
+       really is absent: change the words rather than reissuing the same
+       query. Each returned "line" can be quoted verbatim as-is.
 
 {"tool": "read_source", "name": "<file, e.g. Liu2026.pdf>"}
     -> {"ok": true, "text": "..."} or {"ok": false, "error": "..."}. For long
@@ -105,8 +115,14 @@ SYSTEM_PROMPT = (
     "al.'), use list_sources to find its source_id and call read_source on "
     "it directly instead of guessing more search phrases; a real search "
     "miss just means try a shorter keyword or read the source directly, not "
-    "that the answer isn't there. If, after investigating, no source "
-    "supports any claim at all, finish with exactly: INSUFFICIENT CONTEXT. "
+    "that the answer isn't there. Each claim must actually answer what was "
+    "asked, not just be a real, verbatim, on-topic-sounding fact from a "
+    "source — a true statement about the wrong metric or the wrong aspect "
+    "of the topic (e.g. citing token usage when the question asked about "
+    "dollar cost) is not a valid claim, even though it is grounded. If, "
+    "after investigating, no source actually answers the question, finish "
+    "with exactly: INSUFFICIENT CONTEXT — do not submit a grounded-but-"
+    "irrelevant claim instead. "
     "Reply with exactly one JSON object per turn — no prose outside the "
     "JSON."
 )
@@ -132,14 +148,29 @@ def _extract_json(out: str) -> dict:
         return {}
 
 
-def run_tool(act: dict) -> str:
+def run_tool(act: dict, seen_queries: set | None = None) -> str:
     t = act.get("tool")
 
     if t == "list_sources":
         return json.dumps(tools.list_sources())
 
     if t == "search_sources":
-        return json.dumps(tools.search_sources(act.get("query", "")))
+        query = act.get("query", "")
+        key = " ".join(query.lower().split())
+        if seen_queries is not None and key in seen_queries:
+            # A real run issued one identical failing query three times.
+            # Returning the same empty result each time gives the model no
+            # way to notice, so say it outright.
+            return json.dumps({
+                "ok": False,
+                "error": f"You already searched for {query!r} in this run and it "
+                         f"returned nothing. Repeating it will not help — try "
+                         f"different words, or read a source directly.",
+            })
+        result = tools.search_sources(query)
+        if seen_queries is not None and not result.get("hits"):
+            seen_queries.add(key)
+        return json.dumps(result)
 
     if t == "read_source":
         result = tools.read_source(act.get("name", ""))
@@ -157,7 +188,7 @@ def run_tool(act: dict) -> str:
     return json.dumps({"ok": False, "error": f"unknown tool {t!r}"})
 
 
-def _check_claims(claims: list, state: dict) -> list:
+def _check_claims(claims: list, state: dict, original_question: str) -> list:
     """
     Checks each claim independently and returns only the ones still failing.
     Permanently records outcomes in state:
@@ -172,6 +203,13 @@ def _check_claims(claims: list, state: dict) -> list:
         resubmission is caught instantly without spending another evaluator
         call or risking another network timeout on a quote already known
         to be bad.
+
+    original_question is passed through to evaluate() alongside each claim's
+    own statement, so the evaluator checks not just "does the quote support
+    this claim" but also "is this claim actually responsive to what was
+    asked" -- a real, verbatim, well-supported claim about the wrong metric
+    or the wrong topic (e.g. token usage when dollar cost was asked) is
+    grounded but still wrong, and only the second check catches that.
     """
     errors = []
     for c in claims:
@@ -203,10 +241,12 @@ def _check_claims(claims: list, state: dict) -> list:
             })
             continue
 
-        # Each claim's own "statement" stands in for the question here — the
-        # evaluator judges this specific, narrower claim, not the original
-        # (possibly compound) question as a whole.
-        verdict = evaluate(question=statement, quote=quote, source_id=source_id)
+        # Each claim's own "statement" is checked as the specific, narrower
+        # claim, but original_question is also passed so the evaluator can
+        # catch a grounded claim that answers a different question than the
+        # one actually asked (see docstring above).
+        verdict = evaluate(question=statement, quote=quote, source_id=source_id,
+                            original_question=original_question)
         if not verdict.get("ok"):
             technical = verdict.get("technical_error", False)
             errors.append({
@@ -263,6 +303,7 @@ def _write_log(question: str, trace: list, final_answer: str, eval_rejections: i
         "effective_max_turns": effective_max_turns,
         "max_eval_rejections": MAX_EVAL_REJECTIONS,
         "max_technical_finish_retries": MAX_TECHNICAL_FINISH_RETRIES,
+        "max_technical_finish_failures": MAX_TECHNICAL_FINISH_FAILURES,
         "usage": usage,
         "accepted_claims": accepted_claims,
         "rejected_claims": rejected_claims,
@@ -280,9 +321,11 @@ def answer_question(question: str, verbose: bool = False) -> str:
         "accepted_claims": [],
         "rejected_claims": [],
         "technical_finish_retries": 0,
+        "technical_finish_failures": 0,
     }
     trace = []
     sources_touched = set()
+    failed_queries: set[str] = set()
     start_stats = dict(STATS)
     msgs = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -355,61 +398,87 @@ def answer_question(question: str, verbose: bool = False) -> str:
                 return finish_run("INSUFFICIENT CONTEXT", "insufficient_context_direct", turns_used)
 
             if claims:
-                errors = _check_claims(claims, state)
+                errors = _check_claims(claims, state, question)
             elif state["accepted_claims"]:
                 errors = []  # no new claims submitted, but something is already locked in -> wrap up
             else:
                 errors = [{"reason": ("Provide at least one claim (source_id, quote, statement), "
                                        "or answer INSUFFICIENT CONTEXT if no source supports any claim.")}]
 
+            # A purely-technical failure (e.g. an evaluator network timeout) has nothing
+            # to do with the model's judgment -- there is no useful decision for the
+            # model to make about "how do I fix a timeout," so this is retried silently
+            # in-process (mirroring evaluate()'s own internal retry one level down)
+            # instead of spending a model turn and hoping the model just resubmits the
+            # same claim unchanged. A real run showed exactly the failure mode this
+            # avoids: the model received a technical-error observation and, instead of
+            # resubmitting, went back to searching for a different phrasing -- burning
+            # the run's last turn on a redundant search. Bounded by the same
+            # MAX_TECHNICAL_FINISH_RETRIES pool so a permanently-down evaluator still
+            # can't stall the run forever; each retry re-checks only the claims that are
+            # still outstanding (verified/rejected ones are cached and skipped).
+            is_technical = errors and all(e.get("technical_error") for e in errors)
+            while claims and is_technical and state["technical_finish_retries"] < MAX_TECHNICAL_FINISH_RETRIES:
+                state["technical_finish_retries"] += 1
+                if verbose:
+                    print(f"          -> technical error, auto-retrying in-process "
+                          f"(attempt {state['technical_finish_retries']}/{MAX_TECHNICAL_FINISH_RETRIES}), "
+                          f"no turn or budget cost: {errors}")
+                errors = _check_claims(claims, state, question)
+                is_technical = errors and all(e.get("technical_error") for e in errors)
+
             if not errors:
                 trace.append({
                     "step": step, "tool": "finish", "args": {"claims": claims},
                     "outcome": "accepted",
                     "accepted_claims_total": len(state["accepted_claims"]),
+                    "technical_finish_retries_used": state["technical_finish_retries"],
                 })
                 turns_used += 1
                 return finalize_with_accepted("success", turns_used)
 
-            # Only skip the rejection budget when EVERY error this attempt is
-            # purely technical. If even one claim failed for a real reason
-            # (bad verbatim match or a genuine evaluator REJECT), that must
-            # still count — a technical hiccup on a DIFFERENT claim in the
-            # same attempt shouldn't give a real content problem a free pass.
-            is_technical = errors and all(e.get("technical_error") for e in errors)
-
-            # A purely-technical failure gets a small, separately-capped pool of free
-            # retries (doesn't cost a turn from the exploration budget, mirroring how
-            # it already doesn't cost a rejection from the content budget) -- unless
-            # that pool is exhausted, in which case it's charged like anything else,
-            # so a genuinely broken evaluator still can't stall the run forever.
-            technical_retry_available = is_technical and (
-                state["technical_finish_retries"] < MAX_TECHNICAL_FINISH_RETRIES
-            )
-            if technical_retry_available:
-                state["technical_finish_retries"] += 1
-            else:
-                turns_used += 1
-                if not is_technical:
-                    state["eval_rejections"] += 1
+            # Either a genuine content rejection, or the free technical-retry pool is
+            # now exhausted -- from here on this attempt is charged normally.
+            turns_used += 1
+            if not is_technical:
+                state["eval_rejections"] += 1
 
             trace.append({
                 "step": step, "tool": "finish", "args": {"claims": claims},
-                "outcome": "technical_retry_free" if technical_retry_available else
-                           ("technical_retry_charged" if is_technical else "rejected"),
+                "outcome": "technical_retries_exhausted" if is_technical else "rejected",
                 "errors": errors,
                 "rejections_used": state["eval_rejections"],
                 "technical_finish_retries_used": state["technical_finish_retries"],
                 "accepted_claims_so_far": len(state["accepted_claims"]),
             })
             if verbose:
-                if technical_retry_available:
-                    label = "finish hit a technical error (free retry, no turn/budget cost)"
-                elif is_technical:
-                    label = "finish hit a technical error (free retries exhausted, turn charged)"
-                else:
-                    label = "finish rejected"
+                label = ("finish hit a technical error (free retries exhausted, turn charged)"
+                          if is_technical else "finish rejected")
                 print(f"          -> {label}: {errors}")
+
+            if is_technical:
+                # The free-retry pool is spent and the evaluator is STILL failing.
+                # Without a terminal condition here the run grinds on: technical
+                # errors deliberately do not count against MAX_EVAL_REJECTIONS
+                # (they are not the model's fault), so nothing else stops it, and
+                # a real run burned four turns resubmitting a correct, already
+                # quote-verified claim into a service returning 503 before
+                # reporting "INSUFFICIENT CONTEXT (turn limit reached)". That
+                # report is wrong and, worse, indistinguishable in the logs from
+                # a genuine "no source supports this" -- a silent false negative.
+                # One resubmit is allowed (the note below invites exactly one),
+                # then the run ends and says what actually happened.
+                state["technical_finish_failures"] += 1
+                if state["technical_finish_failures"] >= MAX_TECHNICAL_FINISH_FAILURES:
+                    if state["accepted_claims"]:
+                        return finalize_with_accepted(
+                            "success_partial_evaluator_unavailable", turns_used)
+                    return finish_run(
+                        "EVALUATOR UNAVAILABLE — the verification service could not be "
+                        "reached, so no claim could be checked. This is an infrastructure "
+                        "failure, NOT a finding that the sources lack an answer.",
+                        "evaluator_unavailable", turns_used,
+                    )
 
             if (not is_technical) and state["eval_rejections"] >= MAX_EVAL_REJECTIONS:
                 if state["accepted_claims"]:
@@ -425,15 +494,23 @@ def answer_question(question: str, verbose: bool = False) -> str:
                 for c in claims
                 if (c.get("source_id", ""), c.get("quote", "")) not in failing_keys
             ]
+            note = ("Locked-in claims are final — do not resend or re-verify them. Fix ONLY "
+                     "the claims in 'errors', or call finish with no new claims to stop here "
+                     "and use whatever is already locked in.")
+            if is_technical:
+                note = ("This was a repeated network/infrastructure failure, not a problem "
+                        "with your quote or claim — it was already retried automatically "
+                        "several times. This is NOT a signal to search for a different quote "
+                        "or phrasing. You may resubmit this exact same claim once more, or "
+                        "call finish with no new claims to stop here and use whatever is "
+                        "already locked in.")
             obs = json.dumps({
                 "ok": False,
                 "stage": "finish_verification",
                 "errors": errors,
                 "newly_locked_in": newly_locked,
                 "total_claims_locked_in_so_far": len(state["accepted_claims"]),
-                "note": ("Locked-in claims are final — do not resend or re-verify them. Fix ONLY "
-                         "the claims in 'errors', or call finish with no new claims to stop here "
-                         "and use whatever is already locked in."),
+                "note": note,
                 "technical_error": is_technical,
                 "rejections_used": state["eval_rejections"],
                 "budget": MAX_EVAL_REJECTIONS,
@@ -444,7 +521,7 @@ def answer_question(question: str, verbose: bool = False) -> str:
             ]
             continue
 
-        obs = run_tool(act)
+        obs = run_tool(act, failed_queries)
         turns_used += 1
         trace.append({
             "step": step,
