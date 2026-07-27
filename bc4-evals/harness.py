@@ -18,18 +18,28 @@ import json
 import pathlib
 import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from common.llm import chat, STATS
-
 HERE = pathlib.Path(__file__).resolve().parent
+REPO_ROOT = HERE.parents[0]
+sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "capstone"))
+
+from common.llm import chat, STATS  # noqa: E402
+import agent as capstone_agent  # noqa: E402
+
 CASES = HERE / "cases.jsonl"
 
 PASS_THRESHOLD = 0.8  # the CI gate fails below this — tune with evidence
 
 
 def target(prompt: str) -> str:
-    """The system under test. REPLACE ME with a call into your own agent."""
-    return chat([{"role": "user", "content": prompt}], max_tokens=300, cache=True)
+    """The system under test: the capstone Literature Review Assistant.
+
+    Each case's "prompt" is a real user question. answer_question() runs the
+    full tool loop (search/read/verify/finish) against the 5-paper corpus and
+    the OU LiteLLM Sandbox, and returns the final answer string -- the same
+    thing a person using the assistant would see.
+    """
+    return capstone_agent.answer_question(prompt, verbose=False)
 
 
 def check_case(case: dict, output: str) -> tuple[bool, str]:
@@ -65,16 +75,30 @@ def judge_case(case: dict, output: str) -> tuple[bool, str]:
 
 
 def run_sweep(limit=None):
+    import time
     cases = [json.loads(l) for l in CASES.read_text().splitlines() if l.strip()]
     if limit:
         cases = cases[:limit]
     results = []
-    for c in cases:
+    print(f"running {len(cases)} case(s) against the live agent -- each one is a "
+          f"full tool loop, so this can take anywhere from seconds to a couple of "
+          f"minutes PER case; progress prints as each one finishes.\n", flush=True)
+    for i, c in enumerate(cases, 1):
+        t0 = time.time()
+        print(f"[{i}/{len(cases)}] {c['id']} ...", end=" ", flush=True)
         out = target(c["prompt"])
         ok_a, why_a = check_case(c, out)
         ok_j, why_j = judge_case(c, out) if ok_a else (False, "skipped (assertion failed)")
-        results.append({"id": c["id"], "pass": ok_a and ok_j,
-                        "assertion": why_a, "judge": why_j, "output": out})
+        dt = time.time() - t0
+        result = {"id": c["id"], "pass": ok_a and ok_j,
+                  "assertion": why_a, "judge": why_j, "output": out}
+        results.append(result)
+        note = why_a if why_a != "ok" else why_j
+        print(f"{'PASS' if result['pass'] else 'FAIL'} ({dt:.0f}s) {note}", flush=True)
+        # Write after every case, not just at the end -- if this needs to be
+        # interrupted (or the sandbox stalls on a later case), everything up
+        # to that point is already on disk instead of lost.
+        (HERE / "last_run.json").write_text(json.dumps(results, indent=1))
     return results
 
 

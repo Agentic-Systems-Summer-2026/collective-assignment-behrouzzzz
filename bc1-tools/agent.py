@@ -84,25 +84,73 @@ def run_tool(act: dict) -> str:
     return "ERROR: unknown tool " + repr(t)
 
 
-def main():
-    task = " ".join(sys.argv[1:]) or "Summarize what my notes say about the capstone demo."
+def _first_json_object(text: str) -> dict:
+    """First complete JSON object in the model's reply, ignoring anything after.
+
+    Replaces `re.search(r"\\{.*\\}", ...)`, which was greedy: when the model
+    emitted two objects in one turn it captured from the first `{` to the last
+    `}` and json.loads raised "Extra data". A BC4 eval sweep hit this on 9 of
+    28 cases — it needs the model to emit two objects, which is occasional
+    rather than systematic, so hand-testing never provoked it.
+
+    The obvious fix, making the pattern non-greedy with `.*?`, trades one bug
+    for another: it stops at the first `}`, so `{"tool": "finish", "answer":
+    {"a": 1}}` gets truncated to invalid JSON. raw_decode instead parses
+    forward from the first `{` and stops at the end of one complete object,
+    which handles nesting, trailing objects, leading prose and code fences
+    alike.
+    """
+    i = text.find("{")
+    if i == -1:
+        return {}
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(text[i:])
+        return obj if isinstance(obj, dict) else {}
+    except ValueError:
+        return {}
+
+
+def run_task(task: str, verbose: bool = True) -> str:
+    """Run one task to completion and RETURN the final answer.
+
+    Extracted from main() so the agent can be called from other code — the
+    BC4 eval harness needs a function it can call with a prompt and get a
+    string back, which a print-and-exit main() cannot provide.
+
+    main() now calls this, so running `python3 agent.py "..."` behaves exactly
+    as before: same trace, same ANSWER line, same STATS.
+
+    Returns the finish answer, or a marker if the loop hit MAX_STEPS. The
+    marker is deliberately a distinctive string rather than "" so that an
+    eval case failing this way is visibly different from one that merely
+    returned something wrong.
+    """
     msgs = [{"role": "system", "content": load_prompt("bc1-agent-system.txt")},
             {"role": "user", "content": TOOLS_SPEC + "\nTASK: " + task}]
     for step in range(1, MAX_STEPS + 1):
         out = chat(msgs)
-        m = re.search(r"\{.*\}", out, re.S)
-        act = json.loads(m.group(0)) if m else {}
-        print(f"── step {step}: request≈{sum(len(x['content']) for x in msgs)} chars"
-              f" → chose {act.get('tool')} {({k: v for k, v in act.items() if k not in ('tool', 'answer')})}")
+        act = _first_json_object(out)
+        if verbose:
+            print(f"\u2500\u2500 step {step}: request\u2248{sum(len(x['content']) for x in msgs)} chars"
+                  f" \u2192 chose {act.get('tool')} {({k: v for k, v in act.items() if k not in ('tool', 'answer')})}")
         if act.get("tool") == "finish":
-            print("\nANSWER:", act.get("answer", ""))
-            break
+            answer = act.get("answer", "")
+            if verbose:
+                print("\nANSWER:", answer)
+            return answer
         obs = run_tool(act)
-        print(f"          tool returned {len(obs)} chars")
+        if verbose:
+            print(f"          tool returned {len(obs)} chars")
         msgs += [{"role": "assistant", "content": out},
                  {"role": "user", "content": "OBSERVATION:\n" + obs}]
-    else:
+    if verbose:
         print("hit step limit without finishing")
+    return "STEP_LIMIT_REACHED"
+
+
+def main():
+    task = " ".join(sys.argv[1:]) or "Summarize what my notes say about the capstone demo."
+    run_task(task, verbose=True)
     print(f"\nSTATS: {STATS}")
 
 

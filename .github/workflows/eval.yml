@@ -17,11 +17,14 @@ on:
 jobs:
   evals:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       EVAL_LIVE_N: "5"          # cap the sweep — a push should cost pennies
+      EVALUATOR_MODEL: "Qwen3 32B"  # evaluator.py defaults to Gemma4-31B, which
+        # probe_models.py found taking 186s for a one-word reply on the sandbox
+        # tonight; this one responded in 1.6s. Revisit if it becomes unreliable.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -21,8 +21,15 @@ CANDIDATES = [
     "gemma4-small-12B",
     "GLM 5.2",
     "Claude Haiku 3",
-    # add whatever else the course lists:
-    # "Claude Sonnet 4.5", "Llama-4", "Qwen-3", ...
+    "Amazon-Nova-Lite",
+    "glm-4.7",
+    "GPT OSS",
+    "Kimi K2.7 Code",
+    "Minimax M2.7",
+    "olmo",
+    "Qwen3 32B",
+    "Qwen3.5 397B",
+    "Qwen3.6-27B (small)"
 ]
 
 print(f"provider        : {PROVIDER}")

@@ -1,0 +1,107 @@
+[
+ {
+  "id": "liu_tokens_1",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "The candidate answer accurately reflects the claimed tenfold increase in tokens and doubling of latency compared to baseline LLMs, correctly attributing the finding to Liu et al. (2026).",
+  "output": "According to Liu et al. (2026), agent systems required more than 10 times the token usage and more than twice the latency compared to baseline LLMs."
+ },
+ {
+  "id": "off_topic_refusal",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "no judge criteria",
+  "output": "INSUFFICIENT CONTEXT"
+ },
+ {
+  "id": "liu_multimodal_hle",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "The answer correctly reports 15.5% as the multimodal HLE accuracy attributed to Liu et al. (2026)",
+  "output": "According to Liu et al. (2026), the agent systems achieved 15.5% accuracy on the multimodal Humanity's Last Exam questions."
+ },
+ {
+  "id": "xi_framework",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "The answer correctly identifies all three components of Xi et al.'s framework: brain, perception, and action.",
+  "output": "Xi et al. propose a conceptual framework for LLM-based agents with three key components: brain, perception, and action."
+ },
+ {
+  "id": "qin_modules",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "The answer correctly identifies all six required modules (reasoning, perception, memory, planning, action, and learning) and attributes them to Qin and Jin as requested.",
+  "output": "According to Qin and Jin, the key modules that make up the core architecture of LM-based agents are Reasoning, perception, memory, planning, action, and learning."
+ },
+ {
+  "id": "liu_tokens_2_rerun",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "The candidate answer accurately reflects the claimed tenfold increase in tokens and doubling of latency compared to baseline LLMs, correctly attributing the finding to Liu et al. (2026).",
+  "output": "According to Liu et al. (2026), agent systems required more than 10 times the token usage and more than twice the latency compared to baseline LLMs."
+ },
+ {
+  "id": "abouali_paradigm_names",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "The candidate answer correctly identifies both paradigm names used by Abou Ali et al. for categorizing agentic AI systems.",
+  "output": "Abou Ali et al. use the paradigm names 'symbolic/classical' and 'neural/generative' to categorize agentic AI systems."
+ },
+ {
+  "id": "du_optimization_categories",
+  "pass": false,
+  "assertion": "missing required substring: 'parameter'",
+  "judge": "skipped (assertion failed)",
+  "output": "INSUFFICIENT CONTEXT (turn limit reached without finishing)"
+ },
+ {
+  "id": "wrong_source_check",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "no judge criteria",
+  "output": "INSUFFICIENT CONTEXT (turn limit reached without finishing)"
+ },
+ {
+  "id": "unrelated_benchmark_refusal",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "no judge criteria",
+  "output": "INSUFFICIENT CONTEXT"
+ },
+ {
+  "id": "dollar_cost_refusal",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "no judge criteria",
+  "output": "INSUFFICIENT CONTEXT (evaluator rejection budget exhausted)"
+ },
+ {
+  "id": "paradigm_relation",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "Answer correctly identifies both splits: AbouAli2025's symbolic/classical vs neural/generative paradigm and Du2026's parameter-driven vs parameter-free approach, with accurate descriptions of each categorization.",
+  "output": "The symbolic-vs-neural paradigm split categorizes agentic systems into symbolic systems that rely on algorithmic planning and persistent state, versus neural systems that leverage stochastic generation and prompt-driven orchestration. The parameter-driven-vs-parameter-free split categorizes LLM-based agent optimization approaches into those that modify LLM parameters and those that optimize behavior without modifying LLM parameters."
+ },
+ {
+  "id": "two_way_classification",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "The answer correctly identifies Abou Ali et al. with symbolic/classical and neural/generative split, and Du et al. with parameter-driven and parameter-free split.",
+  "output": "Abou Ali et al. propose a two-way classification framework for agentic AI approaches, splitting agent paradigms into two lineages: symbolic/classical and neural/generative. Du et al. propose a two-way classification framework for LLM-based agent optimization methods, splitting them into parameter-driven and parameter-free categories."
+ },
+ {
+  "id": "openmanus_accuracy",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "The answer correctly reports 30.3% as OpenManus's overall accuracy on MedAgentsBench",
+  "output": "OpenManus achieved 30.3% overall accuracy on MedAgentsBench."
+ },
+ {
+  "id": "format_conciseness",
+  "pass": true,
+  "assertion": "ok",
+  "judge": "no judge criteria",
+  "output": "According to Liu et al. (2026), agent systems required more than 10 times the token usage and more than twice the latency compared to baseline LLMs."
+ }
+]
