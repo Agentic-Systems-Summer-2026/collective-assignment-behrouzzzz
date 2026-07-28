@@ -85,3 +85,15 @@ One thing that surprised me: The agent performed much worse than I expected. In 
 - **What I changed:** I created a separate pool of free retries for network or timeout failures. These retries do not count against the normal turn limit or content-rejection limit. Once this free pool of retries is used up, any further failures will count toward regular limits. This way, a malfunctioning evaluator cannot cause the run to stall indefinitely.
 
 - **Where AI helped, and how I verified its output:** AI helped to create fixes for the claim level rewrite and the turn budget issue. It also wrote automated tests for both. I noticed the timeout bug during a real run before asking for a fix. Then, I ran 14 scripted tests, including one that matched the exact failure I saw. I also checked a generated answer file by hand to make sure the question, quotes, and citations appeared correctly.
+
+
+
+## Day 07/27/2026 - Build Challenge 4 — Evaluation
+
+- **What I built:** An evaluation harness (BC4) linked to my capstone. It runs 15 test cases.
+
+- **What failed:** Starting sweep first run failed in 12 seconds on a missing "pypdf" dependency. The starter workflow's install step didn't cover. Difficulty in setting up the evaluator model due to the long latency in receiving the response. 
+
+- **What I changed:** Fixed the CI install step to include `pypdf`. Switched the evaluator to a faster, reliable model.
+
+- **Where AI helped, and how I verified its output:** Claude wrote the harness code and CI fixes.
