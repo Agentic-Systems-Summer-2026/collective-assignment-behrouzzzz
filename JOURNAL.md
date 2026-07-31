@@ -97,3 +97,30 @@ One thing that surprised me: The agent performed much worse than I expected. In 
 - **What I changed:** Fixed the CI install step to include `pypdf`. Switched the evaluator to a faster, reliable model.
 
 - **Where AI helped, and how I verified its output:** Claude wrote the harness code and CI fixes.
+
+
+## Day 07/31/2026 - Build Challenge 5 — Observability & Oversight
+
+- **What I built:**
+    - Three-step LLM pipeline instrumented with structured JSONL tracing 
+    - Blocking human-in-the-loop gate before `summary.md` is written, with logged approve/reject outcomes and file-existence evidence
+    - Automatic cost reconciliation comparing `STATS` token counts against `gateway.log`, the sandbox's `/v1/models` endpoint, and the Control UI.
+
+- **What failed:**
+    - Starting sweep first run failed in 12 seconds on a missing "pypdf" dependency. The starter workflow's install step didn't cover. Difficulty in setting up the evaluator model due to the long latency in receiving the response.
+    - Deliberate incident (`BC5_BREAK_MODEL="Claude Haiku 33"`). The real HTTP 400 from the sandbox on the `answers` step, captured in trace files with full error and traceback. Pipeline correctly aborted before `summary` ran.
+    - `input()` fails with `EOFError` when the pipeline is run through the OpenClaw TUI. It happened because TUI-launched processes have no attached TTY.
+
+- **What I changed:**
+    - Replaced bare `chat()` calls with a `traced_chat()` wrapper.
+    - Added `_log()` for structured JSONL writes with crash-safe flushing.
+    - Added the `input()` based approval gate with `summary_write` evidence events.
+    - Added `_scan_gateway_log()` and `_fetch_model_catalog()` for cost reconciliation.
+    - Fixed the CI install step to include `pypdf`. Switched the evaluator to a faster, reliable model.
+    - Re-ran all three required scenarios (approve, reject, incident) via the OpenClaw TUI instead of a terminal, piping stdin (`echo y|` / `echo n|`) instead of live typing
+
+- **Where AI helped, and how I verified its output:**
+    - AI helped design the instrumentation
+    - Every claim was checked by execution: 
+        - Trace fields verified against real `trace.jsonl` output.
+        - HITL gate verified with both approve and reject runs, and also cross-checked with independent `ls summary.md`.
