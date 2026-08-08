@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Literature Review Assistant</title>
+<meta name="description" content="An agentic AI system that retrieves, verifies, and cites claims from academic sources. Built and governed as a capstone project.">
+<style>
+  :root {
+    --navy: #1E2761;
+    --navy-light: #2A3577;
+    --ice: #CADCFC;
+    --ice-dark: #3A4A8A;
+    --white: #FFFFFF;
+    --muted: #6B7280;
+    --card: #F4F6FC;
+    --green: #1E5C3A;
+    --green-bg: #E8F3EC;
+    --red: #8A3A3A;
+    --red-bg: #F7EBEB;
+    --warm: #8A6D3A;
+    --warm-bg: #F7F1E8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Calibri, Arial, sans-serif;
+    color: #1a1a1a;
+    line-height: 1.6;
+    background: var(--white);
+  }
+  h1, h2, h3 { font-family: Cambria, Georgia, serif; color: var(--navy); margin: 0; }
+  a { color: var(--navy); }
+  .container { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+  header.hero {
+    background: var(--navy);
+    color: var(--white);
+    padding: 64px 0 56px;
+  }
+  header.hero h1 { color: var(--white); font-size: 2.4rem; margin-bottom: 14px; }
+  header.hero .tagline { color: var(--ice); font-size: 1.15rem; max-width: 640px; margin-bottom: 28px; }
+  .links { display: flex; gap: 12px; flex-wrap: wrap; }
+  .links a { margin-right: 12px; margin-bottom: 12px; }
+  .links a:last-child { margin-right: 0; }
+  .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 0.95rem;
+  }
+  .btn-primary { background: var(--ice); color: var(--navy); }
+  .btn-secondary { background: var(--navy-light); color: var(--white); border: 1px solid var(--ice-dark); }
+
+  nav.subnav {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--white);
+    border-bottom: 1px solid #E5E7EB;
+    padding: 12px 0;
+  }
+  nav.subnav .container { display: flex; gap: 20px; flex-wrap: wrap; }
+  nav.subnav a { color: var(--muted); font-size: 0.9rem; text-decoration: none; font-weight: bold; margin-right: 20px; }
+  nav.subnav a:last-child { margin-right: 0; }
+  nav.subnav a:hover { color: var(--navy); }
+
+  section { padding: 48px 0; border-bottom: 1px solid #EEF0F5; }
+  section:last-of-type { border-bottom: none; }
+  section h2 { font-size: 1.6rem; margin-bottom: 16px; }
+  section p { font-size: 1.02rem; color: #333; max-width: 720px; }
+
+  .check-list { list-style: none; padding: 0; margin: 16px 0 0; }
+  .check-list li {
+    padding: 10px 0 10px 28px;
+    position: relative;
+    font-size: 0.98rem;
+    color: #333;
+    border-bottom: 1px solid #F0F0F0;
+  }
+  .check-list li:before {
+    content: "\2022";
+    color: var(--navy);
+    font-weight: bold;
+    position: absolute;
+    left: 6px;
+  }
+
+  .figure { margin-top: 24px; }
+  .figure img { max-width: 100%; border-radius: 10px; border: 1px solid #E5E7EB; }
+
+  .metrics { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 20px; }
+  .metric { margin-right: 16px; margin-bottom: 16px; }
+  .metric:last-child { margin-right: 0; }
+  .metric {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 20px 24px;
+    min-width: 160px;
+  }
+  .metric-value { font-family: Cambria, Georgia, serif; font-size: 2rem; font-weight: bold; color: var(--navy); }
+  .metric-label { font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+  .note { font-size: 0.85rem; color: var(--muted); font-style: italic; margin-top: 14px; }
+
+  .governance-box { background: var(--warm-bg); border-radius: 10px; padding: 20px 24px; margin-top: 16px; }
+
+  .limitations-box, .future-box { background: var(--card); border-radius: 10px; padding: 8px 24px; margin-top: 16px; }
+
+  footer {
+    background: var(--card);
+    padding: 32px 0;
+    text-align: center;
+  }
+  footer p { color: var(--muted); font-size: 0.88rem; margin: 0; }
+
+  @media (max-width: 600px) {
+    header.hero { padding: 40px 0 32px; }
+    header.hero h1 { font-size: 1.8rem; }
+    nav.subnav .container { gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="container">
+    <h1>Literature Review Assistant</h1>
+    <p class="tagline">An agentic AI system that retrieves, verifies, and cites claims from academic sources. Built and governed as a capstone project.</p>
+    <div class="links">
+      <a class="btn btn-primary" href="https://github.com/Agentic-Systems-Summer-2026/collective-assignment-behrouzzzz">GitHub Repository</a>
+      <a class="btn btn-secondary" href="https://youtu.be/jh7pisKJ_Iw">Demo Video</a>
+      <a class="btn btn-secondary" href="https://docs.google.com/document/d/1ptjHsyvsfeooKEsZh9gpjXNomjot_Rl-/edit?usp=drive_link&amp;ouid=108831255182464655413&amp;rtpof=true&amp;sd=true">Final Report</a>
+    </div>
+  </div>
+</header>
+
+<nav class="subnav"><div class="container"><a href="#problem">Problem</a><a href="#solution">Solution</a><a href="#architecture">Architecture</a><a href="#workflow">Workflow</a><a href="#evaluation">Evaluation</a><a href="#governance">Governance</a><a href="#limitations">Limitations</a><a href="#future_work">Future Work</a></div></nav>
+
+<section id="problem"><div class="container">
+  <h2>The Problem</h2>
+  <p>Literature review work means finding a claim, tracing it to a real source, and checking that the source actually says what you think it says. Agentic AI systems can automate the finding part quickly. The risk is the checking part. A fluent, confident-sounding agent can produce a citation that looks right but is not. It might paraphrase a source and present the result as a quote. Or it might attach a real quote to the wrong idea. This project treats that risk as the central design problem, not an afterthought.</p>
+</div></section>
+
+<section id="solution"><div class="container">
+  <h2>The Solution</h2>
+  <p>The agent answers a question by searching a fixed corpus of academic papers. It proposes a claim with a supporting quote. That claim must then pass two independent checks before it can appear in the final answer. The first check verifies the quote word for word against the source text. The second check uses a separate model to judge whether the claim actually answers the question asked. No claim is accepted on the strength of either check alone.</p>
+</div></section>
+
+<section id="architecture"><div class="container">
+  <h2>Architecture</h2>
+  <p>Three components, each with a narrow job. agent.py runs the orchestration loop and decides what to do next. tools.py exposes five tools. Four are read-only: list, search, read, and look up a citation. The fifth writes the final answer file, and only after every claim in it has already been checked. evaluator.py runs the second, independent check. It always uses a different model than the one that wrote the claim, a rule enforced in code rather than left for someone to remember.</p>
+  <div class="figure"><img src="architecture-diagram.png" alt="System architecture diagram showing the source corpus, tools.py, agent.py, generator model, evaluator.py, and human review, with data flow arrows between them." loading="lazy"></div>
+</div></section>
+
+<section id="workflow"><div class="container">
+  <h2>Agent Workflow</h2>
+  <p>Every turn follows the same loop. The agent searches or reads a source, proposes a claim, checks that the quote is real, and checks that the claim is relevant. It then locks the claim in, or rejects it and tries again. A claim is only accepted once both checks pass independently. If the system cannot find support for a question, it says so directly instead of guessing. A separate guard makes sure it has actually looked before it is allowed to give up.</p>
+  <div class="figure"><img src="workflow-diagram.png" alt="Flowchart of the agent's per-turn decision loop, from search through claim verification to the final accepted or rejected outcome." loading="lazy"></div>
+</div></section>
+
+<section id="evaluation"><div class="container">
+  <h2>Evaluation Highlights</h2>
+  <p>Verification integrity was tested against twelve adversarial cases: paraphrase, fabrication, wrong-source attribution, altered numbers, and similar attacks on the citation itself. All twelve were correctly rejected. Of thirteen documented evaluation cases run live against the current system, twelve passed, covering single-source and multi-source questions. The remaining case asks how two independently sourced facts relate to each other. It failed reproducibly, confirmed independent of which evaluator model was used, and is reported as a known limitation rather than a resolved defect (see the Final Report, Section 5.2). Retrieval was also checked against a structurally different, previously unseen set of documents, confirming the verification approach was not just tuned to the project's own five source papers.</p>
+  <div class="metrics"><div class="metric"><div class="metric-value">12/12</div><div class="metric-label">Adversarial quote-verification cases correctly rejected</div></div><div class="metric"><div class="metric-value">12/13</div><div class="metric-label">Documented evaluation cases passing (live, confirmed)</div></div><div class="metric"><div class="metric-value">5</div><div class="metric-label">Offline regression suites, runnable with zero live model cost</div></div></div>
+  <p class="note">Numbers reflect the project's live-confirmed evaluation record as of the most recent full re-validation run. See the Final Report for full methodology and the one documented known limitation, a composite-question case.</p>
+</div></section>
+
+<section id="governance"><div class="container">
+  <h2>Governance Highlights</h2>
+  <div class="governance-box"><p style="margin:0;">A companion assignment analyzed this system using NIST's AI Risk Management Framework as an organizing lens. This was not a formal compliance audit. It was a structured look at what the architecture actually controls, what evidence backs that up, and what is still open. The honest finding: governance maturity is not a single safe-or-unsafe label. Content verification is strongly evidenced. Prompt-injection resistance is real for some attack paths and essentially untested for others. The system's overall deployment readiness is described as conditional, with a specific, named list of what would need to happen first, not a vague disclaimer.</p></div>
+</div></section>
+
+<section id="limitations"><div class="container">
+  <h2>Limitations</h2>
+  <div class="limitations-box"><ul class="check-list"><li>Composite questions that ask how two independently sourced facts relate to each other are not reliably answerable by the current per-claim evaluator design. This failure is confirmed reproducible and independent of evaluator model choice.</li><li>No dedicated adversarial testing exists for prompt injection, particularly the case where injected content tries to steer which source is used rather than fabricate a claim outright.</li><li>A human-in-the-loop approval gate was built and validated on a smaller companion pipeline, not yet integrated into the production agent.</li><li>The turn budget that limits how long the agent can search does not scale past four sources touched in a single run.</li><li>Only PDF sources are supported; other document formats and scanned or image-only PDFs are not handled.</li><li>No dollar-cost figures are available in the current environment. Only token and call counts are tracked.</li></ul></div>
+</div></section>
+
+<section id="future_work"><div class="container">
+  <h2>Future Work</h2>
+  <div class="future-box"><ul class="check-list"><li>A holistic check over the full set of accepted claims at answer-finalization time, layered on top of the existing per-claim evaluator, to handle composite and relationship questions without loosening the check that currently catches off-topic claims.</li><li>Adversarial testing for each identified prompt-injection attack path, especially source-steering.</li><li>Integrating the validated human-in-the-loop pattern into the production agent, with the same filesystem-level proof standard used in its reference implementation.</li><li>An independent check on the evaluator's own judgement quality, not just its independence from the generator model.</li><li>A defined organizational incident-response policy, covering severity levels, escalation, and response expectations, layered on top of the technical failure detection that already exists.</li></ul></div>
+</div></section>
+
+<footer>
+  <div class="container">
+    <p>This site is a project brochure, not a hosted deployment. The agent runs in a GitHub Codespace and is not accessible from this page.</p>
+  </div>
+</footer>
+
+</body>
+</html>

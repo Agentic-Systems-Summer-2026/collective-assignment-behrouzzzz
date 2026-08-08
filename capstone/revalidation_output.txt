@@ -1,0 +1,188 @@
+######################################################################
+# PART A -- offline [T] cases (no model, no cost)
+######################################################################
+
+======================================================================
+CASE 6: PASS
+======================================================================
+{"ok": false, "error": "Unknown source_id: 'not_a_real_id' not found in sources.json"}
+
+======================================================================
+CASE 7: PASS
+======================================================================
+{"ok": false, "error": "Quote not found verbatim in source (after normalization)."}
+
+======================================================================
+CASE 8: PASS
+======================================================================
+{"file": "test_extra.pdf", "id": null}
+
+======================================================================
+CASE 9: PASS
+======================================================================
+search hits: 1, found in Liu2026: True, read_source ok: True, len: 60182
+
+======================================================================
+CASE 13: PASS
+======================================================================
+{"ok": true}
+
+######################################################################
+# ALL OFFLINE CASES OK
+######################################################################
+
+######################################################################
+# PART B -- Case 5, direct evaluator call (1 model call)
+######################################################################
+
+======================================================================
+CASE 5: PASS
+======================================================================
+{"ok": false, "reason": "The quote provides information about author details, not accuracy scores on medical benchmarks."}
+######################################################################
+# PART C -- full agent loop, 6 cases (live model + evaluator each)
+######################################################################
+
+----- starting Case 1 -----
+── step 1 (turns_used 0/8): chose list_sources {}
+          -> [{"file": "AbouAli2025.pdf", "id": "AbouAli2025"}, {"file": "Du2026.pdf", "id": "Du2026"}, {"file": "Liu2026.pdf", "id": "Liu2026"}, {"file": "Qin2026.pdf", "id": "Qin2026"}, {"file": "Xi2025.pdf", "i
+── step 2 (turns_used 1/8): chose read_source {'name': 'Liu2026.pdf'}
+          -> {"ok": true, "text": "npj | digital medicine Article\nPublished in partnership with Seoul National University Bundang Hospital\nhttps://doi.org/10.1038/s41746-026-02443-6\nBenchmarking large language 
+── step 3 (turns_used 2/8): chose search_sources {'query': 'token usage latency'}
+          -> {"ok": true, "hits": [{"file": "Liu2026.pdf", "line": "Multimodal accuracy remained low (15.5% on multimodal HLE, 29.2% on AgentClinic NEJM), while resource demands increased substantially, with >10\u
+── step 4 (turns_used 3/8): chose finish {'claims': [{'source_id': 'Liu2026', 'quote': 'Multimodal accuracy remained low (15.5% on multimodal HLE, 29.2% on AgentClinic NEJM), while resource demands increased substantially, with >10× token usage and >2× latency.', 'statement': 'According to Liu et al. (2026), agent systems required more than 10 times the token usage and more than twice the latency compared to baseline LLMs.'}]}
+── log written: /workspaces/collective-assignment-behrouzzzz/capstone/logs/20260806T232556_7f538d9d32_a6b863.json (usage: {'calls': 5, 'tokens': 9654, 'cache_hits': 0}, sources_touched: ['Liu2026'], effective_max_turns: 8, accepted: 1, rejected: 0, technical_finish_retries: 0)
+
+======================================================================
+CASE 1: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+======================================================================
+answer: According to Liu et al. (2026), agent systems required more than 10 times the token usage and more than twice the latency compared to baseline LLMs.
+elapsed: 6.7s
+
+----- starting Case 2 -----
+── step 1 (turns_used 0/8): chose list_sources {}
+          -> [{"file": "AbouAli2025.pdf", "id": "AbouAli2025"}, {"file": "Du2026.pdf", "id": "Du2026"}, {"file": "Liu2026.pdf", "id": "Liu2026"}, {"file": "Qin2026.pdf", "id": "Qin2026"}, {"file": "Xi2025.pdf", "i
+── step 2 (turns_used 1/8): chose read_source {'name': 'Liu2026.pdf'}
+          -> {"ok": true, "text": "npj | digital medicine Article\nPublished in partnership with Seoul National University Bundang Hospital\nhttps://doi.org/10.1038/s41746-026-02443-6\nBenchmarking large language 
+── step 3 (turns_used 2/8): chose search_sources {'query': 'token usage latency'}
+          -> {"ok": true, "hits": [{"file": "Liu2026.pdf", "line": "Multimodal accuracy remained low (15.5% on multimodal HLE, 29.2% on AgentClinic NEJM), while resource demands increased substantially, with >10\u
+── step 4 (turns_used 3/8): chose finish {'claims': [{'source_id': 'Liu2026', 'quote': 'Multimodal accuracy remained low (15.5% on multimodal HLE, 29.2% on AgentClinic NEJM), while resource demands increased substantially, with >10× token usage and >2× latency.', 'statement': 'According to Liu et al. (2026), agent systems required more than 10 times the token usage and more than twice the latency compared to baseline LLMs.'}]}
+── log written: /workspaces/collective-assignment-behrouzzzz/capstone/logs/20260806T232558_7f538d9d32_06372c.json (usage: {'calls': 1, 'tokens': 322, 'cache_hits': 4}, sources_touched: ['Liu2026'], effective_max_turns: 8, accepted: 1, rejected: 0, technical_finish_retries: 0)
+
+======================================================================
+CASE 2: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+======================================================================
+answer: According to Liu et al. (2026), agent systems required more than 10 times the token usage and more than twice the latency compared to baseline LLMs.
+elapsed: 1.8s
+
+----- starting Case 3 -----
+── step 1 (turns_used 0/8): chose list_sources {}
+          -> [{"file": "AbouAli2025.pdf", "id": "AbouAli2025"}, {"file": "Du2026.pdf", "id": "Du2026"}, {"file": "Liu2026.pdf", "id": "Liu2026"}, {"file": "Qin2026.pdf", "id": "Qin2026"}, {"file": "Xi2025.pdf", "i
+── step 2 (turns_used 1/8): chose read_source {'name': 'AbouAli2025.pdf'}
+          -> {"ok": true, "text": "Received: 20 July 2025 / Accepted: 7 October 2025 / Published online: 14 November 2025\n\u00a9 The Author(s) 2025\nExtended author information available on the last page of the a
+── step 3 (turns_used 2/8): chose read_source {'name': 'Du2026.pdf'}
+          -> {"ok": true, "text": "A Survey on the Optimization of Large Language\nModel-based Agents\nSHANGHENG DU, Shanghai Institute of Artificial Intelligence for Education, East China Normal Uni-\nversity, Sh
+── step 4 (turns_used 3/12): chose search_sources {'query': 'two-way classification framework'}
+          -> {"ok": true, "hits": [], "total_hits": 0, "match_mode": "terms", "candidate_sources": [{"file": "AbouAli2025.pdf", "matched_terms": ["two", "way", "classification", "framework"]}, {"file": "Qin2026.pd
+── step 5 (turns_used 4/12): chose read_source {'name': 'AbouAli2025.pdf'}
+          -> {"ok": true, "text": "Received: 20 July 2025 / Accepted: 7 October 2025 / Published online: 14 November 2025\n\u00a9 The Author(s) 2025\nExtended author information available on the last page of the a
+── step 6 (turns_used 5/12): chose search_sources {'query': 'symbolic classical neural generative'}
+          -> {"ok": true, "hits": [{"file": "AbouAli2025.pdf", "line": "This survey cuts through this confusion by introducing a novel dual-paradigm framework that categorizes agentic systems into two distinct lin
+── step 7 (turns_used 6/12): chose search_sources {'query': 'parameter-driven methods'}
+          -> {"ok": true, "hits": [{"file": "Du2026.pdf", "line": "In this survey, we provide a comprehensive review of LLM-based agent optimization approaches, categorizing them into parameter-driven and paramete
+── step 8 (turns_used 7/12): chose finish {'claims': [{'source_id': 'AbouAli2025', 'quote': 'This survey cuts through this confusion by introducing a novel dual-paradigm framework that categorizes agentic systems into two distinct lineages: the symbolic/classical (relying on algorithmic planning and persistent state) and the neural/generative (leveraging stochastic generation and prompt-driven orchestration).', 'statement': 'The Abou Ali et al. survey proposes a two-way classification framework for agentic AI approaches, splitting agent paradigms into two lineages: symbolic/classical and neural/generative.'}, {'source_id': 'Du2026', 'quote': 'In this survey, we provide a comprehensive review of LLM-based agent optimization approaches, categorizing them into parameter-driven and parameter-free methods.', 'statement': 'The Du et al. survey proposes a two-way classification framework for LLM-based agent optimization methods, splitting them into two categories: parameter-driven and parameter-free methods.'}]}
+── log written: /workspaces/collective-assignment-behrouzzzz/capstone/logs/20260806T232628_d2910459ad_b68bef.json (usage: {'calls': 10, 'tokens': 45224, 'cache_hits': 0}, sources_touched: ['AbouAli2025', 'Du2026'], effective_max_turns: 12, accepted: 2, rejected: 0, technical_finish_retries: 0)
+
+======================================================================
+CASE 3: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+======================================================================
+answer: The Abou Ali et al. survey proposes a two-way classification framework for agentic AI approaches, splitting agent paradigms into two lineages: symbolic/classical and neural/generative. The Du et al. survey proposes a two-way classification framework for LLM-based agent optimization methods, splitting them into two categories: parameter-driven and parameter-free methods.
+elapsed: 30.0s
+
+----- starting Case 4 -----
+── step 1 (turns_used 0/8): chose list_sources {}
+          -> [{"file": "AbouAli2025.pdf", "id": "AbouAli2025"}, {"file": "Du2026.pdf", "id": "Du2026"}, {"file": "Liu2026.pdf", "id": "Liu2026"}, {"file": "Qin2026.pdf", "id": "Qin2026"}, {"file": "Xi2025.pdf", "i
+── step 2 (turns_used 1/8): chose search_sources {'query': 'dollar cost'}
+          -> {"ok": true, "hits": [], "total_hits": 0, "match_mode": "terms", "candidate_sources": [{"file": "AbouAli2025.pdf", "matched_terms": ["cost"]}, {"file": "Du2026.pdf", "matched_terms": ["cost"]}, {"file
+── step 3 (turns_used 2/8): chose read_source {'name': 'AbouAli2025.pdf'}
+          -> {"ok": true, "text": "Received: 20 July 2025 / Accepted: 7 October 2025 / Published online: 14 November 2025\n\u00a9 The Author(s) 2025\nExtended author information available on the last page of the a
+── step 4 (turns_used 3/8): chose read_source {'name': 'Du2026.pdf'}
+          -> {"ok": true, "text": "A Survey on the Optimization of Large Language\nModel-based Agents\nSHANGHENG DU, Shanghai Institute of Artificial Intelligence for Education, East China Normal Uni-\nversity, Sh
+── step 5 (turns_used 4/12): chose read_source {'name': 'Liu2026.pdf'}
+          -> {"ok": true, "text": "npj | digital medicine Article\nPublished in partnership with Seoul National University Bundang Hospital\nhttps://doi.org/10.1038/s41746-026-02443-6\nBenchmarking large language 
+── step 6 (turns_used 5/16): chose search_sources {'query': 'cost'}
+          -> {"ok": true, "hits": [{"file": "AbouAli2025.pdf", "line": "Semantic Kernel Kothapalli (2024), Meyer (2024) and Costea (2025) Plugin/function composition Connects LLMs to pre-written code functions (\"
+── step 7 (turns_used 6/16): chose search_sources {'query': 'dollar cost'}
+          -> {"ok": false, "error": "You already searched for 'dollar cost' in this run and it returned nothing. Repeating it will not help \u2014 try different words, or read a source directly."}
+── step 8 (turns_used 7/16): chose read_source {'name': 'Qin2026.pdf'}
+          -> {"ok": true, "text": "Tsinghua Science and T echnology\nDoi: 10.26599/TST.2026.9010072\nReview Article\nA survey of large-model-based AI agents\nChuan Qin and Long Jin (B)\nAbstractAdvances of large m
+── step 9 (turns_used 8/20): chose read_source {'name': 'Xi2025.pdf'}
+          -> {"ok": true, "text": "SCIENCE CHINA\nInformation Sciences\nFebruary 2025, Vol. 68, Iss. 2, 121101:1\u2013121101: 44\nh\nttps://doi.org/10.1007/s11432-024-4222-0\nc\u20dd S cience China Press 2025 info
+── step 10 (turns_used 9/20): chose finish {'claims': []}
+          -> finish rejected: [{'reason': 'Provide at least one claim (source_id, quote, statement), or answer INSUFFICIENT CONTEXT if no source supports any claim.'}]
+── step 11 (turns_used 10/20): chose finish {'claims': []}
+── log written: /workspaces/collective-assignment-behrouzzzz/capstone/logs/20260806T232637_c8a568c471_a3c994.json (usage: {'calls': 11, 'tokens': 55097, 'cache_hits': 0}, sources_touched: ['AbouAli2025', 'Du2026', 'Liu2026', 'Qin2026', 'Xi2025'], effective_max_turns: 20, accepted: 0, rejected: 0, technical_finish_retries: 0)
+
+======================================================================
+CASE 4: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+======================================================================
+answer: INSUFFICIENT CONTEXT
+elapsed: 9.0s
+
+----- starting Case 10 -----
+── step 1 (turns_used 0/8): chose list_sources {}
+          -> [{"file": "AbouAli2025.pdf", "id": "AbouAli2025"}, {"file": "Du2026.pdf", "id": "Du2026"}, {"file": "Liu2026.pdf", "id": "Liu2026"}, {"file": "Qin2026.pdf", "id": "Qin2026"}, {"file": "Xi2025.pdf", "i
+── step 2 (turns_used 1/8): chose search_sources {'query': 'OpenManus MedAgentsBench accuracy'}
+          -> {"ok": true, "hits": [{"file": "Liu2026.pdf", "line": "S1b). On the complete 862-item MedAgentsBench HARD set, OpenManus achieved 30.3% accuracy, marginally exceeding GPT-4.1 (28.8%) and surpassing it
+── step 3 (turns_used 2/8): chose finish {'claims': [{'source_id': 'Liu2026', 'quote': 'On the complete 862-item MedAgentsBench HARD set, OpenManus achieved 30.3% accuracy, marginally exceeding GPT-4.1 (28.8%) and surpassing it in si x of the nine individual datasets.', 'statement': 'OpenManus achieved 30.3% accuracy on the complete 862-item MedAgentsBench HARD set.'}]}
+── log written: /workspaces/collective-assignment-behrouzzzz/capstone/logs/20260806T232641_4075ac2e7f_0aee80.json (usage: {'calls': 4, 'tokens': 5993, 'cache_hits': 0}, sources_touched: ['Liu2026'], effective_max_turns: 8, accepted: 1, rejected: 0, technical_finish_retries: 0)
+
+======================================================================
+CASE 10: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+======================================================================
+answer: OpenManus achieved 30.3% accuracy on the complete 862-item MedAgentsBench HARD set.
+elapsed: 3.8s
+
+----- starting Case 12 -----
+── step 1 (turns_used 0/8): chose list_sources {}
+          -> [{"file": "AbouAli2025.pdf", "id": "AbouAli2025"}, {"file": "Du2026.pdf", "id": "Du2026"}, {"file": "Liu2026.pdf", "id": "Liu2026"}, {"file": "Qin2026.pdf", "id": "Qin2026"}, {"file": "Xi2025.pdf", "i
+── step 2 (turns_used 1/8): chose search_sources {'query': 'symbolic neural paradigm'}
+          -> {"ok": true, "hits": [{"file": "AbouAli2025.pdf", "line": "This survey cuts through this confusion by introducing a novel dual-paradigm framework that categorizes agentic systems into two distinct lin
+── step 3 (turns_used 2/8): chose search_sources {'query': 'parameter driven parameter free'}
+          -> {"ok": true, "hits": [{"file": "Du2026.pdf", "line": "In this survey, we provide a comprehensive review of LLM-based agent optimization approaches, categorizing them into parameter-driven and paramete
+── step 4 (turns_used 3/8): chose search_sources {'query': 'symbolic neural paradigm Abou Ali'}
+          -> {"ok": true, "hits": [{"file": "AbouAli2025.pdf", "line": "(2024) 2024 Legal tech Neural agents heavily constrained by symbolic retrieval (RAG) for accuracy Table 5 Paradigm-based taxonomy of Agentic 
+── step 5 (turns_used 4/8): chose finish {'claims': [{'source_id': 'AbouAli2025', 'quote': 'This survey cuts through this confusion by introducing a novel dual-paradigm framework that categorizes agentic systems into two distinct lineages: the symbolic/classical (relying on algorithmic planning and persistent state) and the neural/generative (leveraging stochastic generation and prompt-driven orchestration).', 'statement': 'The symbolic-vs-neural paradigm split, as introduced by Abou Ali et al., categorizes agentic systems into two lineages: symbolic/classical systems that rely on algorithmic planning and persistent state, versus neural/generative systems that leverage stochastic generation and prompt-driven orchestration.'}, {'source_id': 'Du2026', 'quote': 'In this survey, we provide a comprehensive review of LLM-based agent optimization approaches, categorizing them into parameter-driven and parameter-free methods.', 'statement': 'The parameter-driven-vs-parameter-free split, as categorized by Du et al., classifies LLM-based agent optimization approaches into two categories: parameter-driven methods that modify model parameters, and parameter-free methods that optimize behavior without changing parameters.'}]}
+          -> finish rejected: [{'source_id': 'AbouAli2025', 'quote': 'This survey cuts through this confusion by introducing a novel dual-paradigm framework that categorizes agentic systems into two distinct lineages: the symbolic/classical (relying on algorithmic planning and persistent state) and the neural/generative (leveraging stochastic generation and prompt-driven orchestration).', 'reason': 'The claim is not responsive to the original question (Check 2 failed). The question asks for a comparison/relationship between two specific frameworks, but the claim only defines one of them.', 'technical_error': False}, {'source_id': 'Du2026', 'quote': 'In this survey, we provide a comprehensive review of LLM-based agent optimization approaches, categorizing them into parameter-driven and parameter-free methods.', 'reason': 'The claim is not fully responsive to the original question as it only defines one side of the requested comparison (Du et al.) without addressing the relationship to the symbolic-vs-neural split (Abou Ali et al.). Check 2 failed.', 'technical_error': False}]
+── step 6 (turns_used 5/12): chose search_sources {'query': 'symbolic neural paradigm Du et al'}
+          -> {"ok": true, "hits": [{"file": "AbouAli2025.pdf", "line": "This survey cuts through this confusion by introducing a novel dual-paradigm framework that categorizes agentic systems into two distinct lin
+── step 7 (turns_used 6/12): chose finish {'claims': [{'source_id': 'AbouAli2025', 'quote': 'This survey cuts through this confusion by introducing a novel dual-paradigm framework that categorizes agentic systems into two distinct lineages: the symbolic/classical (relying on algorithmic planning and persistent state) and the neural/generative (leveraging stochastic generation and prompt-driven orchestration).', 'statement': 'The symbolic-vs-neural paradigm split, as introduced by Abou Ali et al., categorizes agentic systems into two distinct lineages: symbolic/classical systems that rely on algorithmic planning and persistent state, versus neural/generative systems that leverage stochastic generation and prompt-driven orchestration.'}, {'source_id': 'Du2026', 'quote': 'In this survey, we provide a comprehensive review of LLM-based agent optimization approaches, categorizing them into parameter-driven and parameter-free methods.', 'statement': 'The parameter-driven-vs-parameter-free split, as categorized by Du et al., classifies LLM-based agent optimization approaches into two categories: parameter-driven methods that modify model parameters, and parameter-free methods that optimize behavior without changing parameters.'}, {'source_id': 'AbouAli2025', 'quote': 'This shift marks the definitive break from the symbolic tradition. Agency in the neural paradigm is an emergent property of prompt-driven orchestration, not a product of internal symbolic logic.', 'statement': 'The neural paradigm, as defined by Abou Ali et al., differs from the symbolic paradigm in that agency emerges from prompt-driven orchestration rather than internal symbolic logic.'}, {'source_id': 'Du2026', 'quote': "Besides parameter-driven optimization methods critical for evolving LLM-based agents, parameter-free optimization offers a promising alternative by optimizing the agent's behavior without modifying LLM parameters.", 'statement': 'Parameter-free optimization, as described by Du et al., represents an approach that optimizes agent behavior without modifying LLM parameters, contrasting with parameter-driven methods.'}]}
+          -> finish rejected: [{'source_id': 'AbouAli2025', 'quote': 'This survey cuts through this confusion by introducing a novel dual-paradigm framework that categorizes agentic systems into two distinct lineages: the symbolic/classical (relying on algorithmic planning and persistent state) and the neural/generative (leveraging stochastic generation and prompt-driven orchestration).', 'reason': 'This exact quote was already rejected earlier in this run for a content reason. Resubmitting it unchanged will not work — use a different, shorter, single-sentence span instead.'}, {'source_id': 'Du2026', 'quote': 'In this survey, we provide a comprehensive review of LLM-based agent optimization approaches, categorizing them into parameter-driven and parameter-free methods.', 'reason': 'This exact quote was already rejected earlier in this run for a content reason. Resubmitting it unchanged will not work — use a different, shorter, single-sentence span instead.'}, {'source_id': 'AbouAli2025', 'quote': 'This shift marks the definitive break from the symbolic tradition. Agency in the neural paradigm is an emergent property of prompt-driven orchestration, not a product of internal symbolic logic.', 'reason': 'The claim is not responsive to the original question (Check 2 failed).', 'technical_error': False}]
+── log written: /workspaces/collective-assignment-behrouzzzz/capstone/logs/20260806T232658_65cc2b32a1_e89eaf.json (usage: {'calls': 11, 'tokens': 28207, 'cache_hits': 0}, sources_touched: ['AbouAli2025', 'Du2026'], effective_max_turns: 12, accepted: 1, rejected: 3, technical_finish_retries: 0)
+
+======================================================================
+CASE 12: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+======================================================================
+answer: Parameter-free optimization, as described by Du et al., represents an approach that optimizes agent behavior without modifying LLM parameters, contrasting with parameter-driven methods.
+elapsed: 16.8s
+
+
+######################################################################
+# SUMMARY -- paste everything from here up, plus the full output above, back
+######################################################################
+  Case  1: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+  Case  2: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+  Case  3: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+  Case  4: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+  Case  5: PASS
+  Case  6: PASS
+  Case  7: PASS
+  Case  8: PASS
+  Case  9: PASS
+  Case 10: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+  Case 12: SEE OUTPUT ABOVE -- check against cases.md's pass criteria
+  Case 13: PASS
+
+Case 11 (efficiency ceiling) is derived from Case 1's own logged token/call count above, not a separate run.
+
+Also paste: the contents of the newest 6 files in capstone/logs/ (one per full-loop case above).

@@ -1,8 +1,10 @@
 """Autonomous agent loop for the Literature Review Assistant capstone."""
 
 import json
+import os
 import time
 import hashlib
+import traceback
 import uuid
 from pathlib import Path
 
@@ -14,6 +16,13 @@ MAX_TURNS = 8  # base budget, proven sufficient for single-source questions (Cas
 TURNS_PER_EXTRA_SOURCE = 4  # extra allowance once a 2nd, 3rd, ... distinct source is touched
 MAX_TURNS_HARD_CAP = 20  # absolute ceiling regardless of source count, so cost can't run away
 MAX_EVAL_REJECTIONS = 2
+MIN_EXPLORATION_BEFORE_GIVEUP = 1  # at least one real search_sources/read_source call
+    # required before an INSUFFICIENT CONTEXT verdict is accepted with zero claims
+    # locked in. SYSTEM_PROMPT already asks the model not to give up early, but that
+    # is prose, not an enforced constraint -- nothing previously stopped a same-turn
+    # give-up. Deliberately 1, not higher: this is a floor on effort, not a
+    # requirement to try any particular number of phrasings, which would start
+    # dictating retrieval strategy rather than just ruling out zero-effort exits.
 MAX_TECHNICAL_FINISH_FAILURES = 2  # charged finish attempts that failed purely technically
     # before the run gives up on the evaluator entirely. The note sent back after the first
     # one invites exactly one resubmit, so 2 is "you tried again and it was still down".
@@ -46,6 +55,17 @@ TOOLS_SPEC = """Available tools — reply with exactly ONE JSON object per turn,
        rarely the paper\'s own words. If a search returns nothing, that text
        really is absent: change the words rather than reissuing the same
        query. Each returned "line" can be quoted verbatim as-is.
+
+       If BOTH of the above find nothing, the result may also include
+       "candidate_sources": [{"file", "matched_terms"}, ...], ranked by how
+       many of your query\'s words each source contains anywhere in it. This
+       is NOT evidence any of them answer the question — it only means the
+       question\'s own wording may not be the source\'s wording (e.g. you
+       asked about "cost" and a source only ever says "computational
+       resources" or "GPU utilization"). If you see this, read_source on the
+       top candidate is usually more productive than trying more synonyms.
+       If "candidate_sources" is absent too, that vocabulary isn\'t in the
+       corpus in any form.
 
 {"tool": "read_source", "name": "<file, e.g. Liu2026.pdf>"}
     -> {"ok": true, "text": "..."} or {"ok": false, "error": "..."}. For long
@@ -158,9 +178,6 @@ def run_tool(act: dict, seen_queries: set | None = None) -> str:
         query = act.get("query", "")
         key = " ".join(query.lower().split())
         if seen_queries is not None and key in seen_queries:
-            # A real run issued one identical failing query three times.
-            # Returning the same empty result each time gives the model no
-            # way to notice, so say it outright.
             return json.dumps({
                 "ok": False,
                 "error": f"You already searched for {query!r} in this run and it "
@@ -188,7 +205,9 @@ def run_tool(act: dict, seen_queries: set | None = None) -> str:
     return json.dumps({"ok": False, "error": f"unknown tool {t!r}"})
 
 
-def _check_claims(claims: list, state: dict, original_question: str) -> list:
+def _check_claims(claims: list, state: dict, original_question: str,
+                   trace_path: Path | None = None, run_id: str | None = None,
+                   run_start: float | None = None, step_label: str = "claim_check") -> list:
     """
     Checks each claim independently and returns only the ones still failing.
     Permanently records outcomes in state:
@@ -210,9 +229,16 @@ def _check_claims(claims: list, state: dict, original_question: str) -> list:
     asked" -- a real, verbatim, well-supported claim about the wrong metric
     or the wrong topic (e.g. token usage when dollar cost was asked) is
     grounded but still wrong, and only the second check catches that.
+
+    trace_path/run_id/run_start are optional: when given, each individual
+    evaluate() call is bracketed with its own start/end trace event (latency,
+    accept/reject outcome), the same granularity _traced_chat gives the
+    generator's own calls. Left optional, defaulting to no tracing, so any
+    other caller (including existing offline tests that call this function
+    directly) is unaffected.
     """
     errors = []
-    for c in claims:
+    for i, c in enumerate(claims):
         source_id = c.get("source_id", "")
         quote = c.get("quote", "")
         statement = c.get("statement", "")
@@ -245,8 +271,19 @@ def _check_claims(claims: list, state: dict, original_question: str) -> list:
         # claim, but original_question is also passed so the evaluator can
         # catch a grounded claim that answers a different question than the
         # one actually asked (see docstring above).
+        eval_step = f"{step_label}_{i}_evaluator"
+        if trace_path is not None:
+            _trace_event(trace_path, run_id, run_start, eval_step, "start")
+        t0 = time.time()
         verdict = evaluate(question=statement, quote=quote, source_id=source_id,
                             original_question=original_question)
+        if trace_path is not None:
+            _trace_event(
+                trace_path, run_id, run_start, eval_step, "end",
+                latency_s=round(time.time() - t0, 3),
+                decision=("accepted" if verdict.get("ok")
+                           else ("technical_error" if verdict.get("technical_error") else "rejected")),
+            )
         if not verdict.get("ok"):
             technical = verdict.get("technical_error", False)
             errors.append({
@@ -281,15 +318,87 @@ def _truncate(value, limit: int = 800):
     return value
 
 
+def _trace_path_for(run_id: str) -> Path:
+    return LOG_DIR / f"{run_id}.trace.jsonl"
+
+
+def _trace_event(trace_path: Path, run_id: str, run_start: float, step: str, phase: str, **extra) -> None:
+    """Append one crash-safe JSON line to this run's trace file.
+
+    Ported from the BC5 observability build challenge's `_log()` (see
+    Knowledge_Base.md Section 6 for the citation). The point of this
+    function, specifically, is the flush()+fsync() pair: an event is
+    durable on disk before the process can crash after logging it, which
+    is exactly what the previous logging design (a single summary JSON
+    written only at successful completion) could not guarantee. Before
+    this addition, an uncaught exception anywhere in the run left no log
+    at all -- a real, documented gap, not a hypothetical one.
+    """
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "run_id": run_id,
+        "elapsed_s": round(time.time() - run_start, 3),
+        "step": step,
+        "phase": phase,
+    }
+    entry.update(extra)
+    with trace_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+
+
+def _traced_chat(trace_path: Path, run_id: str, run_start: float, step: str, msgs, **chat_kwargs):
+    """Wraps a chat() call with a start event and a success/failed end event.
+
+    Calls the module-level `chat` name (not a captured reference), so test
+    stubs that monkeypatch `agent.chat` (see test_min_exploration.py and
+    similar) still take effect here exactly as before -- this function adds
+    tracing, it does not change what gets called. On failure, the exception
+    is re-raised unchanged after being recorded; this function only
+    observes, it never swallows an error the rest of the loop needs to see.
+    """
+    calls_before = STATS.get("calls", 0)
+    tokens_before = STATS.get("tokens", 0)
+    _trace_event(trace_path, run_id, run_start, step, "start")
+    t0 = time.time()
+    try:
+        result = chat(msgs, **chat_kwargs)
+        _trace_event(
+            trace_path, run_id, run_start, step, "end",
+            decision="success",
+            latency_s=round(time.time() - t0, 3),
+            calls_delta=STATS.get("calls", 0) - calls_before,
+            tokens_delta=STATS.get("tokens", 0) - tokens_before,
+        )
+        return result
+    except Exception as e:
+        _trace_event(
+            trace_path, run_id, run_start, step, "end",
+            decision="failed",
+            latency_s=round(time.time() - t0, 3),
+            calls_delta=STATS.get("calls", 0) - calls_before,
+            tokens_delta=STATS.get("tokens", 0) - tokens_before,
+            error_type=type(e).__name__, error=str(e),
+        )
+        raise
+
+
 def _write_log(question: str, trace: list, final_answer: str, eval_rejections: int,
                 outcome: str, usage: dict, sources_touched: set, effective_max_turns: int,
                 accepted_claims: list, rejected_claims: list, turns_charged: int,
-                technical_finish_retries: int) -> str:
+                technical_finish_retries: int, run_id: str | None = None) -> str:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    q_hash = hashlib.sha1(question.encode("utf-8")).hexdigest()[:10]
-    timestamp = time.strftime("%Y%m%dT%H%M%S")
-    unique = uuid.uuid4().hex[:6]
-    path = LOG_DIR / f"{timestamp}_{q_hash}_{unique}.json"
+    if run_id:
+        path = LOG_DIR / f"{run_id}.json"
+    else:
+        # Fallback for any caller that doesn't pass run_id (keeps this
+        # function usable standalone, e.g. from a REPL or a future script).
+        q_hash = hashlib.sha1(question.encode("utf-8")).hexdigest()[:10]
+        timestamp = time.strftime("%Y%m%dT%H%M%S")
+        unique = uuid.uuid4().hex[:6]
+        path = LOG_DIR / f"{timestamp}_{q_hash}_{unique}.json"
     record = {
         "question": question,
         "final_answer": final_answer,
@@ -314,6 +423,64 @@ def _write_log(question: str, trace: list, final_answer: str, eval_rejections: i
 
 
 def answer_question(question: str, verbose: bool = False) -> str:
+    """Public entry point -- same signature and behavior as before this
+    change (same return type, same exceptions propagate to the caller, so
+    run_full_revalidation.py and every existing test needs no changes).
+
+    What is new: a run_id and trace_path are created here, in this outer
+    frame, before the real work starts, so both survive even if the inner
+    implementation raises partway through. This ports the BC5 observability
+    build challenge's `run()` wrapper pattern (see Knowledge_Base.md Section
+    6 for the citation) to close a real, documented gap: previously, an
+    uncaught exception anywhere in the loop (a chat() call raising instead
+    of returning, for example) meant the run ended with no log written at
+    all, successful or not. Now:
+      - every tool call and every model call (generator and evaluator) gets
+        its own start/end trace line, written and fsynced immediately, in
+        `logs/<run_id>.trace.jsonl`;
+      - an uncaught exception is recorded as one "crashed" trace event, with
+        the full traceback, before being re-raised unchanged -- this
+        function does not swallow errors, it only guarantees one is never
+        silently unlogged;
+      - a "session_end" trace event is written in a finally block on every
+        exit path, so a trace file that never got its closing line is
+        itself a visible signal something went wrong mid-run.
+
+    The existing per-run summary JSON (`logs/<run_id>.json`, written by
+    _write_log via finish_run/finalize_with_accepted on every *successful*
+    completion path) is unchanged in format and is still the primary
+    evidence source for docs/cases.md and the evaluation record. The trace
+    file is a new, complementary layer specifically for the failure paths
+    the summary log was never able to cover.
+    """
+    run_id = (f"{time.strftime('%Y%m%dT%H%M%S')}_"
+              f"{hashlib.sha1(question.encode('utf-8')).hexdigest()[:10]}_"
+              f"{uuid.uuid4().hex[:6]}")
+    trace_path = _trace_path_for(run_id)
+    run_start = time.time()
+    _trace_event(trace_path, run_id, run_start, "run", "start", question_chars=len(question))
+    outcome = "unknown"
+    try:
+        result = _answer_question_impl(question, verbose, run_id, trace_path, run_start)
+        outcome = "completed"
+        return result
+    except Exception as e:
+        outcome = "crashed"
+        _trace_event(
+            trace_path, run_id, run_start, "run", "crashed",
+            error_type=type(e).__name__, error=str(e), traceback=traceback.format_exc(),
+        )
+        if verbose:
+            print(f"── CRASHED, recorded to {trace_path} before re-raising: {type(e).__name__}: {e}")
+        raise
+    finally:
+        _trace_event(
+            trace_path, run_id, run_start, "run", "session_end",
+            outcome=outcome, total_runtime_s=round(time.time() - run_start, 3),
+        )
+
+
+def _answer_question_impl(question: str, verbose: bool, run_id: str, trace_path: Path, run_start: float) -> str:
     state = {
         "eval_rejections": 0,
         "verified_keys": set(),
@@ -326,6 +493,9 @@ def answer_question(question: str, verbose: bool = False) -> str:
     trace = []
     sources_touched = set()
     failed_queries: set[str] = set()
+    exploration_attempts = 0  # total search_sources + read_source calls this run,
+        # regardless of outcome -- used only to gate a premature INSUFFICIENT CONTEXT
+        # (see MIN_EXPLORATION_BEFORE_GIVEUP below), never to gate a real answer
     start_stats = dict(STATS)
     msgs = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -341,7 +511,7 @@ def answer_question(question: str, verbose: bool = False) -> str:
         cap = _effective_max_turns(sources_touched)
         path = _write_log(question, trace, answer, state["eval_rejections"], outcome, usage,
                            sources_touched, cap, state["accepted_claims"], state["rejected_claims"],
-                           turns_charged, state["technical_finish_retries"])
+                           turns_charged, state["technical_finish_retries"], run_id=run_id)
         if verbose:
             print(f"── log written: {path} (usage: {usage}, sources_touched: {sorted(sources_touched)}, "
                   f"effective_max_turns: {cap}, accepted: {len(state['accepted_claims'])}, "
@@ -368,12 +538,15 @@ def answer_question(question: str, verbose: bool = False) -> str:
         if step > cap + MAX_TECHNICAL_FINISH_RETRIES + 2:  # absolute safety backstop
             break
 
-        out = chat(msgs, cache=True)
+        out = _traced_chat(trace_path, run_id, run_start, f"turn_{step}_generator", msgs, cache=True)
         act = _extract_json(out)
 
         if verbose:
             print(f"── step {step} (turns_used {turns_used}/{cap}): chose {act.get('tool')} "
                   f"{({k: v for k, v in act.items() if k not in ('tool', 'answer')})}")
+
+        if act.get("tool") in ("search_sources", "read_source"):
+            exploration_attempts += 1
 
         if act.get("tool") == "read_source":
             name = act.get("name", "")
@@ -390,6 +563,38 @@ def answer_question(question: str, verbose: bool = False) -> str:
                     sources_touched.add(_source_key(sid))
 
             if answer_field == "INSUFFICIENT CONTEXT" and not claims and not state["accepted_claims"]:
+                if exploration_attempts < MIN_EXPLORATION_BEFORE_GIVEUP:
+                    # Nothing upstream of this ever required the model to actually
+                    # look before giving up -- SYSTEM_PROMPT only asks for it in
+                    # prose ("don't give up after one or two failed searches"),
+                    # and that line is advisory, not enforced. Confirmed by
+                    # reading the loop: this branch's condition never referenced
+                    # exploration_attempts before this change, so a model could
+                    # legally call finish/INSUFFICIENT CONTEXT on step 1 with zero
+                    # search_sources or read_source calls and it would be accepted
+                    # outright. Every real run so far happened to explore first,
+                    # but "happened to" is not a guarantee this system should rely
+                    # on for a verdict that gets reported as fact. This is a floor
+                    # on EFFORT only (at least one real attempt to look) -- it says
+                    # nothing about which words to search for, so it adds no new
+                    # retrieval logic and cannot change what counts as a correct
+                    # answer, only how early a negative one may be accepted.
+                    trace.append({
+                        "step": step, "tool": "finish",
+                        "args": {"answer": answer_field, "claims": claims},
+                        "outcome": "insufficient_context_rejected_no_attempt",
+                    })
+                    obs = json.dumps({
+                        "ok": False,
+                        "error": "You haven't tried search_sources or read_source yet this "
+                                 "run. Look before concluding the sources don't cover this.",
+                    })
+                    turns_used += 1
+                    msgs += [
+                        {"role": "assistant", "content": out},
+                        {"role": "user", "content": "OBSERVATION:\n" + obs},
+                    ]
+                    continue
                 trace.append({
                     "step": step, "tool": "finish", "args": {"answer": answer_field, "claims": claims},
                     "outcome": "accepted_insufficient_context",
@@ -398,7 +603,9 @@ def answer_question(question: str, verbose: bool = False) -> str:
                 return finish_run("INSUFFICIENT CONTEXT", "insufficient_context_direct", turns_used)
 
             if claims:
-                errors = _check_claims(claims, state, question)
+                errors = _check_claims(claims, state, question,
+                                        trace_path=trace_path, run_id=run_id, run_start=run_start,
+                                        step_label=f"turn_{step}_finish")
             elif state["accepted_claims"]:
                 errors = []  # no new claims submitted, but something is already locked in -> wrap up
             else:
@@ -424,7 +631,9 @@ def answer_question(question: str, verbose: bool = False) -> str:
                     print(f"          -> technical error, auto-retrying in-process "
                           f"(attempt {state['technical_finish_retries']}/{MAX_TECHNICAL_FINISH_RETRIES}), "
                           f"no turn or budget cost: {errors}")
-                errors = _check_claims(claims, state, question)
+                errors = _check_claims(claims, state, question,
+                                        trace_path=trace_path, run_id=run_id, run_start=run_start,
+                                        step_label=f"turn_{step}_finish_retry{state['technical_finish_retries']}")
                 is_technical = errors and all(e.get("technical_error") for e in errors)
 
             if not errors:
@@ -521,7 +730,12 @@ def answer_question(question: str, verbose: bool = False) -> str:
             ]
             continue
 
+        tool_step = f"turn_{step}_tool_{act.get('tool', 'unknown')}"
+        _trace_event(trace_path, run_id, run_start, tool_step, "start")
+        t0 = time.time()
         obs = run_tool(act, failed_queries)
+        _trace_event(trace_path, run_id, run_start, tool_step, "end",
+                     latency_s=round(time.time() - t0, 3))
         turns_used += 1
         trace.append({
             "step": step,

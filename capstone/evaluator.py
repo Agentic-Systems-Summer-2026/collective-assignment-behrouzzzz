@@ -1,14 +1,10 @@
 """Evaluator-optimizer check for the Literature Review Assistant capstone."""
 
 import os
-import sys
-import pathlib
 import time
-
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from common.llm import chat, DEFAULT_MODEL as GENERATOR_MODEL, PROVIDER
 
-os.environ.setdefault("EVALUATOR_MODEL", "Gemma4-31B")
+os.environ.setdefault("EVALUATOR_MODEL", "gemma4-small-12B")
 
 MAX_TECHNICAL_RETRIES = 1
 
@@ -86,11 +82,14 @@ def evaluate(question: str, quote: str, source_id: str, original_question: str |
                 temperature=0,
                 retries=0,
             )
-
+            # chat() can return None instead of raising when the model produces an
+            # empty or filtered completion. Without this check the loop falls
+            # through to response.strip() on None and crashes the whole run
+            # before any log is written. Raising here routes it through the
+            # same retry-then-technical_error path as a network failure, which
+            # is what an unusable response actually is.
             if not isinstance(response, str) or not response.strip():
                 raise RuntimeError(f"Evaluator returned an empty response: {response!r}")
-            break
-
             break
         except Exception as e:
             last_error = e
@@ -104,28 +103,25 @@ def evaluate(question: str, quote: str, source_id: str, original_question: str |
             "reason": f"Evaluator technical failure after {MAX_TECHNICAL_RETRIES} retry: {last_error}",
         }
 
-
     text = response.strip()
     if text.upper().startswith("ACCEPT"):
         return {"ok": True}
     if text.upper().startswith("REJECT"):
         reason = text.split(":", 1)[1].strip() if ":" in text else ""
         # A reply cut off mid-sentence still starts with REJECT, so it would
-        # otherwise be recorded as a real verdict: it spends the rejection
-        # budget and trips the "already rejected for a content reason" guard,
-        # poisoning the rest of the run. A real run was ended by the reason
-        # "The claim specifies the" -- 23 characters, ending on a determiner.
-        # Genuine rejections from this model run ~160 chars and close with
-        # sentence punctuation, so an unpunctuated stub is a dropped
-        # connection, not a judgement. Reporting it as technical keeps the
-        # claim unaccepted either way, but stops an outage from masquerading
-        # as a finding.
+        # otherwise be recorded as a real content verdict: it spends the
+        # rejection budget and can trip the "already rejected for a content
+        # reason" guard, poisoning the rest of the run. Genuine rejections
+        # from this model run well over 30 characters and close with
+        # sentence punctuation, so a short, unpunctuated stub is a dropped
+        # response, not a judgement.
         if len(reason) < 30 or not reason.endswith((".", "!", ")")):
             return {"ok": False, "technical_error": True,
                     "reason": f"Evaluator reply looks truncated: {text[:80]!r}"}
         return {"ok": False, "reason": reason}
     # Neither verdict word: the evaluator did not answer the question it was
     # asked, which is a malfunction rather than a ruling on the claim. Still
-    # fail-safe (nothing is accepted), but recorded honestly.
+    # fail-safe (nothing is accepted), but recorded honestly as a technical
+    # issue rather than a content judgement.
     return {"ok": False, "technical_error": True,
             "reason": f"Evaluator gave an unparseable response: {text[:80]!r}"}

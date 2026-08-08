@@ -124,3 +124,15 @@ One thing that surprised me: The agent performed much worse than I expected. In 
     - Every claim was checked by execution: 
         - Trace fields verified against real `trace.jsonl` output.
         - HITL gate verified with both approve and reject runs, and also cross-checked with independent `ls summary.md`.
+
+
+## Day 19 - Capstone — Final Report & Presentation
+## Day 19 — Final Report & Presentation
+
+**What I built:** Final capstone report materials, re-evaluation evidence, and a marketing website for the capstone.
+
+**What failed:** The latest evaluation revealed a known limitation in relationship based questions.
+
+**What I changed:** Updated the documentation to reflect the limitation honestly and prepared the website and final submission materials.
+
+**Where AI helped, and how I verified its output:** AI helped analyze and combine project evidence and build the website. I verified the output against the project artifacts and evaluation results.

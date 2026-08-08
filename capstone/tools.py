@@ -23,6 +23,9 @@ TERMS_WINDOW_SENTENCES = 3  # adjacent sentences an all-terms match may span; 3 
     # match drift so far apart that the passage no longer reads as one statement.
 SNIPPET_LEAD_CHARS = 60  # context kept BEFORE an over-long match; small on purpose so
     # the rest of the matched sentence survives the clamp (see _snippet).
+CANDIDATE_SOURCES_MAX = 3  # stage-3 discovery is advisory, not a result set to page
+    # through -- capping it keeps the observation small and keeps the signal to
+    # "here's where to look," not "here's a ranked corpus browse."
 
 _LIGATURES = {
     "ﬀ": "ff",
@@ -230,11 +233,15 @@ def read_source(name: str) -> dict:
 
 def search_sources(query: str, max_hits: int = SEARCH_MAX_HITS) -> dict:
     """
-    Two-stage search over every source.
+    Three-stage search over every source.
 
     Stage 1 "phrase": the whole query as one contiguous span.
     Stage 2 "terms":  only if stage 1 found nothing -- sentences containing
                       ALL the query's words, in any order.
+    Stage 3 "candidates" (advisory only): only if stages 1 and 2 both found
+                      nothing -- sources ranked by how many of the query's
+                      content words appear ANYWHERE in them, even scattered
+                      across unrelated sentences.
 
     Stage 2 exists because a model asking about several things at once writes
     a multi-concept query ("OpenManus MedAgentsBench accuracy") and expects
@@ -244,7 +251,23 @@ def search_sources(query: str, max_hits: int = SEARCH_MAX_HITS) -> dict:
     that identical query three times and never recovered. Matching what the
     caller means removes the mismatch instead of documenting around it.
 
-    Both stages compare canonical text (see _canon), so extraction artifacts
+    Stage 3 exists for a narrower, harder case stages 1-2 cannot touch at
+    all: the user's words and the source's words for the same concept don't
+    overlap enough to ever land in one sentence -- "cost to operate the
+    model" against a source that only ever says "computational resources"
+    and "GPU utilization". No amount of query rephrasing finds that with
+    substring matching, because the words genuinely differ. Stage 3 does NOT
+    attempt to solve this by matching meaning -- that would mean embeddings,
+    which is out of scope here. It solves a narrower, honest version of the
+    problem: point at sources worth reading, using only evidence already in
+    hand (word overlap), without ever claiming those sources contain the
+    answer. That claim is left entirely to read_source, verify_quote, and
+    the evaluator, exactly as before. Ranked by matched-term count so the
+    most promising candidate sorts first; a source matching zero content
+    words is not a candidate at all, so a query with no real vocabulary
+    overlap anywhere in the corpus still correctly reports nothing.
+
+    All stages compare canonical text (see _canon), so extraction artifacts
     in spacing or hyphenation cannot hide a passage that is really there.
     Every returned snippet is a real span of the source and will pass
     verify_quote as-is.
@@ -268,7 +291,44 @@ def search_sources(query: str, max_hits: int = SEARCH_MAX_HITS) -> dict:
                           "sentences containing all of its words instead.")
     if total > len(hits):
         result["truncated"] = True
+
+    if not hits:
+        terms = _query_terms(query)
+        candidates = _rank_candidate_sources(terms) if terms else []
+        if candidates:
+            result["candidate_sources"] = candidates
+            result["note"] = (
+                "No exact or combined match, but these sources share some "
+                "vocabulary with your query, ranked by how many query words "
+                "each contains. This is NOT evidence they answer the "
+                "question -- only that they may be worth reading directly "
+                "with read_source instead of trying more keyword variations.")
+
     return result
+
+
+def _rank_candidate_sources(terms: list[str]) -> list[dict]:
+    """
+    Sources ranked by how many distinct query terms occur anywhere in them.
+
+    Deliberately the crudest possible signal -- raw vocabulary overlap, no
+    weighting, no proximity, no meaning. That crudeness is the point: it is
+    fully deterministic, needs no model call and no index beyond the text
+    already read for search itself, and it degrades honestly. A source that
+    shares zero terms is never listed, so a query whose vocabulary is truly
+    absent from the whole corpus still correctly yields no candidates rather
+    than a plausible-looking guess.
+    """
+    scored = []
+    for name, text in _iter_sources():
+        canon = _canon(text)
+        matched = [t for t in terms if t in canon]
+        if matched:
+            scored.append({"file": name, "matched_terms": matched, "score": len(matched)})
+    scored.sort(key=lambda c: c["score"], reverse=True)
+    for c in scored:
+        del c["score"]  # matched_terms already conveys it; keep the field list minimal
+    return scored[:CANDIDATE_SOURCES_MAX]
 
 
 _STOPWORDS = {"the", "and", "for", "with", "that", "this", "from", "into",
